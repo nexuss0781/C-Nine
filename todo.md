@@ -33,7 +33,7 @@
 - [ ] Verify upload-to-extraction-to-page-context processing end to end with an authenticated test PDF.
 - [ ] Prepare a Vercel deployment handoff that documents required build settings, environment variables, storage, database, authentication, and scheduled extraction constraints.
 - [ ] Configure any Vercel-side scheduled extraction trigger after the user publishes the external deployment.
-- [ ] Create the requested private C-Nine GitHub repository and push the current production-hardened source state.
+- [x] Create the requested private C-Nine GitHub repository and push the current production-hardened source state.
 - [x] Remove all demo documents, demo notes, demo activities, preview replies, and preview-only status labels from the runtime experience.
 - [x] Replace nonfunctional notification, search, fullscreen, and placeholder controls with production behavior or remove them from the interface.
 - [x] Require authentication before workspace data operations and show intentional sign-in, empty, loading, and failure states.
