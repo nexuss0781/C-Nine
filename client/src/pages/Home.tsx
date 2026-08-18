@@ -1,33 +1,93 @@
 import { useAuth } from "@/_core/hooks/useAuth";
+import { HistoryPanel } from "@/components/workspace/HistoryPanel";
+import { AiSettingsDialog } from "@/components/workspace/AiSettingsDialog";
+import { NotesWorkspace } from "@/components/workspace/NotesWorkspace";
+import { PdfLibrary } from "@/components/workspace/PdfLibrary";
+import { PdfViewer } from "@/components/workspace/PdfViewer";
+import { StudyChat } from "@/components/workspace/StudyChat";
+import { WorkspaceTabs } from "@/components/workspace/WorkspaceTabs";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { Loader2 } from "lucide-react";
-import { Streamdown } from 'streamdown';
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { useWorkspace, WorkspaceProvider, type LeftWorkspacePanel, type RightWorkspacePanel } from "@/contexts/WorkspaceContext";
+import { cn } from "@/lib/utils";
+import { demoActivities } from "@/lib/workspace";
+import { startLogin } from "@/const";
+import type { LucideIcon } from "lucide-react";
+import { Bell, BookOpenText, ChevronLeft, ChevronRight, FileText, History, LibraryBig, Loader2, LogOut, PanelLeft, Search, Settings, Sparkles } from "lucide-react";
+import { toast } from "sonner";
+import { useState } from "react";
+import React from "react";
 
-/**
- * All content in this page are only for example, replace with your own feature implementation
- * When building pages, remember your instructions in Frontend Workflow, Frontend Best Practices, Design Guide and Common Pitfalls
- */
+const leftItems: Array<{ id: LeftWorkspacePanel; label: string; icon: LucideIcon }> = [
+  { id: "viewer", label: "Reader", icon: FileText },
+  { id: "library", label: "Library", icon: LibraryBig },
+];
+
+const rightItems: Array<{ id: RightWorkspacePanel; label: string; icon: LucideIcon }> = [
+  { id: "notes", label: "Notes", icon: BookOpenText },
+  { id: "chat", label: "Assistant", icon: Sparkles },
+  { id: "history", label: "History", icon: History },
+];
+
 export default function Home() {
-  // The useAuth hook provides authentication state.
-  // To implement login/logout, call logout(), or start login from an event
-  // handler: onClick={() => startLogin()} (imported from "@/const"). Never call
-  // startLogin() during render (no href={startLogin()}) — it mints a one-time
-  // nonce cookie and must run only at the moment of navigation.
-  let { user, loading, error, isAuthenticated, logout } = useAuth();
+  return <WorkspaceProvider><StudyWorkspace /></WorkspaceProvider>;
+}
 
-  // If theme is switchable in App.tsx, we can implement theme toggling like this:
-  // const { theme, toggleTheme } = useTheme();
+function StudyWorkspace() {
+  const { user, loading, isAuthenticated, logout } = useAuth();
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const {
+    documents,
+    activeDocument,
+    activeDocumentId,
+    activePage,
+    activeThreadId,
+    leftPanel,
+    rightPanel,
+    railCollapsed,
+    markdown,
+    setActivePage,
+    setLeftPanel,
+    setRightPanel,
+    setRailCollapsed,
+    setMarkdown,
+    saveNote,
+    openDocument,
+    uploadDocument,
+    archiveDocument,
+    deleteDocument,
+    updatePageCount,
+    restoreChatThread,
+  } = useWorkspace();
+
+  if (loading) return <div className="flex min-h-screen items-center justify-center bg-[#0d0e0f]"><Loader2 className="size-5 animate-spin text-white/50" /></div>;
 
   return (
-    <div className="min-h-screen flex flex-col">
-      <main>
-        {/* Example: lucide-react for icons */}
-        <Loader2 className="animate-spin" />
-        Example Page
-        {/* Example: Streamdown for markdown rendering */}
-        <Streamdown>Any **markdown** content</Streamdown>
-        <Button variant="default">Example Button</Button>
-      </main>
+    <div className="min-h-screen bg-[#0d0e0f] text-white">
+      <div className="flex min-h-screen">
+        <aside className={cn("relative hidden shrink-0 border-r border-white/[0.08] bg-[#101113] px-3 py-4 transition-[width] duration-200 md:flex md:flex-col", railCollapsed ? "w-[72px]" : "w-[214px]")}>
+          <div className="flex items-center gap-2.5 px-1.5"><div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-white text-sm font-bold tracking-tight text-black">C9</div>{!railCollapsed ? <div className="min-w-0"><p className="truncate text-sm font-semibold tracking-tight text-white">C-Nine</p><p className="mt-0.5 text-[10px] uppercase tracking-[0.16em] text-white/35">Study workspace</p></div> : null}</div>
+          <div className="mt-8 space-y-1">{leftItems.map(item => <RailButton key={item.id} item={item} active={leftPanel === item.id} collapsed={railCollapsed} onClick={() => setLeftPanel(item.id)} />)}</div>
+          <div className="mt-7 border-t border-white/[0.08] pt-5"><p className={cn("mb-2 px-2.5 text-[10px] font-medium uppercase tracking-[0.15em] text-white/30", railCollapsed && "hidden")}>Workspace</p>{rightItems.map(item => <RailButton key={item.id} item={item} active={rightPanel === item.id} collapsed={railCollapsed} onClick={() => setRightPanel(item.id)} subtle />)}</div>
+          <div className="mt-auto space-y-2"><button onClick={() => isAuthenticated ? setSettingsOpen(true) : toast.message("Sign in to configure a server-side AI connection.")} className={cn("flex h-9 w-full items-center gap-3 rounded-lg px-2.5 text-xs text-white/45 transition-colors hover:bg-white/[0.06] hover:text-white/80", railCollapsed && "justify-center px-0")}><Settings className="size-3.5" />{!railCollapsed ? <span>Settings</span> : null}</button><div className={cn("flex items-center gap-2 rounded-lg border border-white/[0.08] bg-white/[0.025] p-2", railCollapsed && "justify-center p-1.5")}><Avatar className="size-6 border border-white/[0.12]"><AvatarFallback className="bg-white/[0.08] text-[10px] text-white">{user?.name?.slice(0, 1).toUpperCase() ?? "P"}</AvatarFallback></Avatar>{!railCollapsed ? <div className="min-w-0 flex-1"><p className="truncate text-[11px] font-medium text-white/80">{user?.name ?? "Preview workspace"}</p><p className="truncate text-[10px] text-white/38">{isAuthenticated ? "Authenticated" : "Local frontend preview"}</p></div> : null}{isAuthenticated && !railCollapsed ? <button onClick={logout} className="text-white/35 hover:text-white" aria-label="Sign out"><LogOut className="size-3.5" /></button> : null}</div></div>
+          <button onClick={() => setRailCollapsed(value => !value)} className="absolute -right-3 top-5 hidden size-6 items-center justify-center rounded-full border border-white/[0.12] bg-[#18191c] text-white/45 shadow-lg hover:text-white md:flex" aria-label="Collapse navigation">{railCollapsed ? <ChevronRight className="size-3.5" /> : <ChevronLeft className="size-3.5" />}</button>
+        </aside>
+
+        <main className="flex min-w-0 flex-1 flex-col">
+          <header className="flex min-h-16 items-center justify-between gap-3 border-b border-white/[0.08] bg-[#0d0e0f]/90 px-4 backdrop-blur sm:px-6"><div className="flex min-w-0 items-center gap-3"><button onClick={() => setRailCollapsed(value => !value)} className="flex size-8 items-center justify-center rounded-lg border border-white/[0.1] bg-white/[0.025] text-white/60 hover:bg-white/[0.08] hover:text-white md:hidden" aria-label="Toggle navigation"><PanelLeft className="size-4" /></button><div className="min-w-0"><p className="truncate text-sm font-medium text-white">{activeDocument?.filename ?? "New study session"}</p><p className="mt-0.5 truncate text-[11px] text-white/40">{isAuthenticated ? "Private workspace · session protected" : "Preview mode · sign in before documents persist"}</p></div></div><div className="flex shrink-0 items-center gap-2"><span className="hidden rounded-full border border-emerald-300/15 bg-emerald-300/[0.07] px-2 py-1 text-[10px] font-medium text-emerald-100/75 sm:inline-flex">Context ready · page {activePage}</span><Button variant="ghost" size="icon" className="size-8 text-white/55 hover:bg-white/[0.08] hover:text-white" onClick={() => toast.message("Notifications will be connected to document processing events.")} aria-label="Notifications"><Bell className="size-3.5" /></Button><Button variant="ghost" size="icon" className="size-8 text-white/55 hover:bg-white/[0.08] hover:text-white" onClick={() => toast.message("Global document search is being staged for the protected library API.")} aria-label="Search workspace"><Search className="size-3.5" /></Button>{!isAuthenticated ? <Button onClick={() => startLogin()} className="h-8 bg-white px-3 text-xs font-semibold text-black hover:bg-white/90">Sign in</Button> : null}</div></header>
+          <div className="flex min-h-0 flex-1 flex-col gap-4 p-3 sm:p-4 lg:flex-row lg:gap-4 lg:p-5">
+            <section className="flex min-h-[450px] min-w-0 flex-[1.04] flex-col gap-2 lg:min-h-0"><WorkspaceTabs items={leftItems} active={leftPanel} onSelect={setLeftPanel} label={leftPanel === "viewer" ? "Reader" : "Library"} />{leftPanel === "viewer" ? <PdfViewer document={activeDocument} page={activePage} onPageChange={setActivePage} onPageCountResolved={updatePageCount} /> : <PdfLibrary documents={documents} activeDocumentId={activeDocumentId} onOpen={openDocument} onUpload={uploadDocument} onArchive={archiveDocument} onDelete={deleteDocument} />}</section>
+            <section className="flex min-h-[500px] min-w-0 flex-1 flex-col gap-2 lg:min-h-0"><WorkspaceTabs items={rightItems} active={rightPanel} onSelect={setRightPanel} label={rightPanel} />{rightPanel === "notes" ? <NotesWorkspace markdown={markdown} documentName={activeDocument?.filename} activePage={activePage} onChange={setMarkdown} onSave={saveNote} /> : null}{rightPanel === "chat" ? <StudyChat documentName={activeDocument?.filename} documentId={activeDocumentId} activePage={activePage} threadId={activeThreadId} /> : null}{rightPanel === "history" ? <HistoryPanel activities={demoActivities} onRestoreDocument={openDocument} onRestoreThread={restoreChatThread} /> : null}</section>
+          </div>
+        </main>
+      </div>
+      {isAuthenticated ? <AiSettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} /> : null}
     </div>
   );
+}
+
+function RailButton({ item, active, collapsed, onClick, subtle = false }: { item: { label: string; icon: LucideIcon }; active: boolean; collapsed: boolean; onClick: () => void; subtle?: boolean }) {
+  const Icon = item.icon;
+  return <Tooltip><TooltipTrigger asChild><button onClick={onClick} className={cn("flex h-10 w-full items-center gap-3 rounded-lg px-2.5 text-left text-xs transition-colors", active ? subtle ? "bg-white/[0.09] text-white" : "bg-white text-black" : "text-white/55 hover:bg-white/[0.07] hover:text-white", collapsed && "justify-center px-0")}><Icon className="size-4 shrink-0" />{!collapsed ? <span>{item.label}</span> : null}</button></TooltipTrigger><TooltipContent side="right" className={cn(!collapsed && "hidden")}>{item.label}</TooltipContent></Tooltip>;
 }

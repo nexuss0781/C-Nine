@@ -1,0 +1,33 @@
+# Project TODO
+
+- [x] Document Phase 1 architecture decisions, shared domain vocabulary, and API contracts.
+- [x] Configure the React application for the cool black-and-white dark theme.
+- [x] Implement the two-panel workspace shell with a collapsible left rail.
+- [x] Add viewer/library tab switching in the left workspace panel.
+- [x] Add notes/chat/history tab switching in the right workspace panel.
+- [x] Create a shared workspace context for active document, active page, panels, and selected tabs.
+- [x] Complete real PDF fit-width and fit-page calculations and unbounded fast page navigation.
+- [x] Surface active-page context in both notes and chat panels.
+- [x] Implement client-side PDF upload validation for type and the 30 MB limit.
+- [x] Implement the PDF library with metadata, search, sorting, filtering, open, archive, and delete actions.
+- [x] Complete CommonMark rendering with safe link handling and full output sanitization alongside safe Mermaid fenced-block rendering.
+- [x] Persist distinct document-linked note read and edit states.
+- [x] Complete the AI chat panel with document/page context, streaming placeholder, explicit errors, and retry states.
+- [x] Complete the history panel with document and chat-thread restore actions.
+- [x] Define Drizzle tables and migrations for documents, notes, chat threads, messages, AI settings, and processing events.
+- [x] Implement protected tRPC procedures that scope documents, notes, chat threads, and settings to the authenticated user.
+- [x] Implement durable PDF storage and ownership-checked file access.
+- [x] Implement PDF text extraction, page mapping, processing status, retry, and page-aware context assembly.
+- [x] Implement server-only OpenCode base URL and API key configuration with a masked settings display.
+- [x] Implement model catalog retrieval, persisted selection, and secure AI chat proxying.
+- [x] Add frontend and server tests for key interaction, authorization, validation, and error paths.
+- [x] Complete workspace-level keyboard-flow and focus-state validation across navigation, reading, library, and settings controls.
+- [ ] Save a completed project checkpoint after the first delivered engineering phase.
+- [x] Implement the approved MySQL-compatible Drizzle schema and migration for user-scoped C-Nine workspace data.
+- [x] Replace the remaining mock activity history with authenticated document and chat-thread persistence.
+- [x] Implement protected PDF upload storage, file validation, and processing-state transitions using the managed storage service.
+- [x] Add the managed periodic extraction queue contract, idempotent scheduled handler, and processing retry controls.
+- [x] Extract page-level PDF text into the user-scoped page map and expose page-aware context to protected application procedures.
+- [x] Add an ownership-validated PDF file-access procedure that returns a signed URL only to the document owner.
+- [ ] Deploy the scheduled extraction handler and create the managed periodic job that processes queued PDFs automatically.
+- [ ] Verify upload-to-extraction-to-page-context processing end to end with an authenticated test PDF.
