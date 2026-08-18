@@ -21,4 +21,26 @@ app.use(
   })
 );
 
+// Keep failures inside the Express function so Vercel receives a response with
+// a JSON content type rather than replacing it with its plain-text 500 page.
+app.use((error: unknown, req: express.Request, res: express.Response, next: express.NextFunction) => {
+  if (res.headersSent) {
+    next(error);
+    return;
+  }
+
+  console.error("[API] Unhandled request error", {
+    method: req.method,
+    path: req.path,
+    error: error instanceof Error ? error.stack ?? error.message : String(error),
+  });
+
+  res.status(500).json({
+    error: {
+      message: "Internal server error",
+      code: "INTERNAL_SERVER_ERROR",
+    },
+  });
+});
+
 export default app;
