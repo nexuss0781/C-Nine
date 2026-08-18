@@ -31,3 +31,10 @@
 - [x] Add an ownership-validated PDF file-access procedure that returns a signed URL only to the document owner.
 - [ ] Deploy the scheduled extraction handler and create the managed periodic job that processes queued PDFs automatically.
 - [ ] Verify upload-to-extraction-to-page-context processing end to end with an authenticated test PDF.
+- [x] Remove all demo documents, demo notes, demo activities, preview replies, and preview-only status labels from the runtime experience.
+- [x] Replace nonfunctional notification, search, fullscreen, and placeholder controls with production behavior or remove them from the interface.
+- [x] Require authentication before workspace data operations and show intentional sign-in, empty, loading, and failure states.
+- [x] Remove development-only language from user-facing content and production-release validation notes.
+- [x] Add authenticated document, note, and history query failure states with actionable recovery guidance.
+- [x] Resolve and verify the extraction-handler server import path without persistent development runtime errors.
+- [x] Rewrite validation notes as production-ready verification records with no future-tense release language.

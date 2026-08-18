@@ -11,6 +11,8 @@ type NotesWorkspaceProps = {
   markdown: string;
   documentName?: string;
   activePage: number;
+  errorMessage?: string;
+  onRetry?: () => void;
   onChange: (value: string) => void;
   onSave?: (value: string) => void;
 };
@@ -57,9 +59,10 @@ function MermaidDiagram({ chart }: { chart: string }) {
   return <div className="my-5 overflow-x-auto rounded-xl border border-white/[0.1] bg-black/20 p-4 [&_svg]:mx-auto [&_svg]:min-w-[420px]" dangerouslySetInnerHTML={{ __html: markup }} />;
 }
 
-export function NotesWorkspace({ markdown, documentName, activePage, onChange, onSave }: NotesWorkspaceProps) {
+export function NotesWorkspace({ markdown, documentName, activePage, errorMessage, onRetry, onChange, onSave }: NotesWorkspaceProps) {
   const [editing, setEditing] = useState(false);
   const [savedAt, setSavedAt] = useState("just now");
+  const hasDocument = Boolean(documentName);
 
   const save = () => {
     onSave?.(markdown);
@@ -70,14 +73,14 @@ export function NotesWorkspace({ markdown, documentName, activePage, onChange, o
   return (
     <section className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-white/[0.08] bg-[#111214] shadow-[0_18px_60px_rgba(0,0,0,0.18)]">
       <header className="flex flex-wrap items-center justify-between gap-3 border-b border-white/[0.08] bg-white/[0.015] px-4 py-3.5 sm:px-5">
-        <div className="flex min-w-0 items-center gap-2.5"><span className="flex size-8 items-center justify-center rounded-lg bg-white/[0.07] text-white/70"><BookOpenText className="size-4" /></span><div className="min-w-0"><p className="truncate text-sm font-medium text-white">Study notes</p><p className="mt-0.5 truncate text-[11px] text-white/45">Linked to {documentName ?? "the selected document"} · page {activePage} · saved {savedAt}</p></div></div>
+        <div className="flex min-w-0 items-center gap-2.5"><span className="flex size-8 items-center justify-center rounded-lg bg-white/[0.07] text-white/70"><BookOpenText className="size-4" /></span><div className="min-w-0"><p className="truncate text-sm font-medium text-white">Study notes</p><p className="mt-0.5 truncate text-[11px] text-white/45">{hasDocument ? `Linked to ${documentName} · page ${activePage} · saved ${savedAt}` : "Select a document to create notes"}</p></div></div>
         <div className="flex items-center gap-1.5">
-          <Button variant="ghost" size="sm" onClick={() => setEditing(false)} className="h-8 px-2.5 text-xs text-white/60 hover:bg-white/[0.08] hover:text-white"><Eye className="mr-1.5 size-3.5" />Preview</Button>
-          <Button variant="ghost" size="sm" onClick={() => setEditing(true)} className="h-8 px-2.5 text-xs text-white/60 hover:bg-white/[0.08] hover:text-white"><Edit3 className="mr-1.5 size-3.5" />Edit</Button>
+          <Button variant="ghost" size="sm" onClick={() => setEditing(false)} disabled={!hasDocument} className="h-8 px-2.5 text-xs text-white/60 hover:bg-white/[0.08] hover:text-white"><Eye className="mr-1.5 size-3.5" />Preview</Button>
+          <Button variant="ghost" size="sm" onClick={() => setEditing(true)} disabled={!hasDocument} className="h-8 px-2.5 text-xs text-white/60 hover:bg-white/[0.08] hover:text-white"><Edit3 className="mr-1.5 size-3.5" />Edit</Button>
           {editing ? <Button size="sm" onClick={save} className="h-8 bg-white px-2.5 text-xs text-black hover:bg-white/90"><Save className="mr-1.5 size-3.5" />Save</Button> : null}
         </div>
       </header>
-      {editing ? (
+      {errorMessage ? <div role="alert" className="flex min-h-0 flex-1 flex-col items-center justify-center gap-3 px-6 text-center"><TriangleAlert className="size-7 stroke-[1.25] text-red-100/70" /><p className="text-sm font-medium text-white/75">Notes could not be loaded</p><p className="max-w-xs text-xs leading-5 text-white/40">{errorMessage}</p>{onRetry ? <Button variant="ghost" size="sm" onClick={onRetry} className="h-8 border border-white/[0.12] px-3 text-xs text-white/70 hover:bg-white/[0.08] hover:text-white">Retry</Button> : null}</div> : !hasDocument ? <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-3 px-6 text-center"><BookOpenText className="size-7 stroke-[1.25] text-white/30" /><p className="text-sm font-medium text-white/75">No document selected</p><p className="max-w-xs text-xs leading-5 text-white/40">Open a PDF from the library to create notes that remain linked to the source document.</p></div> : editing ? (
         <div className="flex min-h-0 flex-1 flex-col p-4"><div className="mb-3 flex items-center gap-2 text-[11px] text-white/45"><Code2 className="size-3.5" /> CommonMark and Mermaid fenced blocks are supported.</div><Textarea value={markdown} onChange={event => onChange(event.target.value)} className="min-h-0 flex-1 resize-none border-white/[0.1] bg-black/20 p-4 font-mono text-xs leading-6 text-white/80 placeholder:text-white/30 focus-visible:ring-white/35" /></div>
       ) : (
         <div className="workspace-markdown min-h-0 flex-1 overflow-y-auto px-5 py-6 text-sm leading-7 text-white/72 sm:px-7"><ReactMarkdown remarkPlugins={[remarkGfm]} skipHtml urlTransform={defaultUrlTransform} components={{ a({ href, children, ...props }) { return <a href={href} target="_blank" rel="noreferrer" {...props}>{children}</a>; }, code({ className, children, ...props }) { const isMermaid = /language-mermaid/.test(className ?? ""); return isMermaid ? <MermaidDiagram chart={String(children).replace(/\n$/, "")} /> : <code className={className} {...props}>{children}</code>; } }}>{markdown}</ReactMarkdown></div>
