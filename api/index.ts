@@ -12,14 +12,16 @@ app.use(express.json({ limit: "50mb" }));
 app.use(express.urlencoded({ limit: "50mb", extended: true }));
 registerStorageProxy(app);
 registerOAuthRoutes(app);
-app.all("/api/scheduled/extractQueuedPdfs", runQueuedPdfExtraction);
-app.use(
-  "/api/trpc",
-  createExpressMiddleware({
-    router: appRouter,
-    createContext,
-  })
-);
+app.all(["/api/scheduled/extractQueuedPdfs", "/scheduled/extractQueuedPdfs"], runQueuedPdfExtraction);
+const trpcMiddleware = createExpressMiddleware({
+  router: appRouter,
+  createContext,
+});
+// Vercel mounts `api/index.ts` under `/api` and may strip that prefix before
+// invoking Express. Supporting both forms keeps local and deployed routing
+// equivalent and prevents the function from falling through to a platform
+// error response.
+app.use(["/api/trpc", "/trpc"], trpcMiddleware);
 
 // Keep failures inside the Express function so Vercel receives a response with
 // a JSON content type rather than replacing it with its plain-text 500 page.
