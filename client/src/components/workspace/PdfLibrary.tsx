@@ -61,7 +61,6 @@ export function PdfLibrary({ documents, activeDocumentId, onOpen, onUpload, onAr
       return;
     }
     onUpload(file);
-    toast.success("PDF added to the workspace. Opening it now.");
   };
 
   const statusStyle: Record<WorkspaceDocument["status"], string> = {
@@ -145,7 +144,7 @@ export function PdfLibrary({ documents, activeDocumentId, onOpen, onUpload, onAr
           </div>
         )}
       </div>
-      <footer className="flex h-11 items-center justify-between border-t border-white/[0.08] px-4 text-[10px] text-white/40"><span>{documents.length} document{documents.length === 1 ? "" : "s"} in library</span><span className="flex items-center gap-1"><MoreHorizontal className="size-3" /> Actions are staged for per-user persistence</span></footer>
+      <footer className="flex h-11 items-center justify-between border-t border-white/[0.08] px-4 text-[10px] text-white/40"><span>{documents.length} document{documents.length === 1 ? "" : "s"} in library</span><span className="flex items-center gap-1"><MoreHorizontal className="size-3" /> Secure workspace storage</span></footer>
     </section>
   );
 }

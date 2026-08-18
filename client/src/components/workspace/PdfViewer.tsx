@@ -40,7 +40,7 @@ export function PdfViewer({
   const { isAuthenticated } = useAuth();
   const numericDocumentId = Number(document?.id);
   const fileAccessQuery = trpc.documents.fileAccess.useQuery({ documentId: numericDocumentId || 1 }, { enabled: isAuthenticated && Number.isInteger(numericDocumentId) && numericDocumentId > 0 });
-  const documentUrl = isAuthenticated ? fileAccessQuery.data?.url : document?.previewUrl;
+  const documentUrl = isAuthenticated ? fileAccessQuery.data?.url : undefined;
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const surfaceRef = useRef<HTMLDivElement>(null);
   const [pdfDocument, setPdfDocument] = useState<pdfjsLib.PDFDocumentProxy | null>(null);
@@ -132,6 +132,10 @@ export function PdfViewer({
     setZoom(Math.min(2.25, mode === "width" ? widthScale : Math.min(widthScale, heightScale)));
   };
 
+  const openFullscreen = () => {
+    void surfaceRef.current?.requestFullscreen?.();
+  };
+
   return (
     <section className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-white/[0.08] bg-[#111214] shadow-[0_18px_60px_rgba(0,0,0,0.18)]">
       <header className="flex min-h-16 items-center justify-between gap-3 border-b border-white/[0.08] bg-white/[0.015] px-4">
@@ -142,18 +146,18 @@ export function PdfViewer({
           </p>
         </div>
         <div className="flex items-center gap-1.5">
-          <Button variant="ghost" size="icon" className="h-8 w-8 text-white/70 hover:bg-white/[0.08] hover:text-white" onClick={() => setZoom(value => Math.max(0.65, value - 0.15))} aria-label="Zoom out">
+          <Button variant="ghost" size="icon" className="h-8 w-8 text-white/70 hover:bg-white/[0.08] hover:text-white" onClick={() => setZoom(value => Math.max(0.65, value - 0.15))} disabled={!pdfDocument} aria-label="Zoom out">
             <Minus className="size-4" />
           </Button>
           <span className="w-10 text-center font-mono text-[11px] text-white/55">{Math.round(zoom * 100)}%</span>
-          <Button variant="ghost" size="icon" className="h-8 w-8 text-white/70 hover:bg-white/[0.08] hover:text-white" onClick={() => setZoom(value => Math.min(2.25, value + 0.15))} aria-label="Zoom in">
+          <Button variant="ghost" size="icon" className="h-8 w-8 text-white/70 hover:bg-white/[0.08] hover:text-white" onClick={() => setZoom(value => Math.min(2.25, value + 0.15))} disabled={!pdfDocument} aria-label="Zoom in">
             <Plus className="size-4" />
           </Button>
           <span className="mx-1 h-4 w-px bg-white/[0.1]" />
-          <Button variant="ghost" size="sm" className="h-8 px-2 text-[11px] text-white/65 hover:bg-white/[0.08] hover:text-white" onClick={() => void fitPage("width")}>
+          <Button variant="ghost" size="sm" className="h-8 px-2 text-[11px] text-white/65 hover:bg-white/[0.08] hover:text-white" onClick={() => void fitPage("width")} disabled={!pdfDocument}>
             Fit width
           </Button>
-          <Button variant="ghost" size="sm" className="h-8 px-2 text-[11px] text-white/65 hover:bg-white/[0.08] hover:text-white" onClick={() => void fitPage("page")}>
+          <Button variant="ghost" size="sm" className="h-8 px-2 text-[11px] text-white/65 hover:bg-white/[0.08] hover:text-white" onClick={() => void fitPage("page")} disabled={!pdfDocument}>
             Fit page
           </Button>
         </div>
@@ -163,7 +167,7 @@ export function PdfViewer({
         <aside className="hidden w-16 shrink-0 border-r border-white/[0.08] bg-black/15 py-3 sm:block">
           <div className="mb-3 flex items-center justify-center text-[10px] font-medium uppercase tracking-[0.14em] text-white/35">Pages</div>
           <div className="h-full space-y-2 overflow-y-auto px-2 pb-6">
-            {Array.from({ length: totalPages || 5 }, (_, index) => index + 1).map(item => (
+            {Array.from({ length: totalPages }, (_, index) => index + 1).map(item => (
               <button
                 key={item}
                 onClick={() => setSafePage(item)}
@@ -197,20 +201,10 @@ export function PdfViewer({
           ) : documentUrl ? (
             <canvas ref={canvasRef} className="max-w-none rounded-sm bg-white shadow-[0_20px_50px_rgba(0,0,0,0.55)]" />
           ) : document ? (
-            <div className="relative w-full max-w-[560px] overflow-hidden rounded-sm bg-[#f2f0ea] px-9 py-12 text-[#282725] shadow-[0_20px_50px_rgba(0,0,0,0.55)] sm:px-14 sm:py-16">
-              <div className="absolute inset-x-0 top-0 h-1 bg-[#1d1d1c]" />
-              <div className="mb-10 flex items-center justify-between border-b border-[#282725]/15 pb-4 text-[10px] uppercase tracking-[0.18em] text-[#282725]/55">
-                <span>Reading preview</span><span>Page {page}</span>
-              </div>
-              <h2 className="max-w-sm font-serif text-3xl font-medium tracking-tight">Upload a PDF to begin active reading.</h2>
-              <p className="mt-6 max-w-md text-sm leading-7 text-[#282725]/65">The viewer is ready for a signed-in user's document. The library validates PDF files and limits web uploads to 30 MB before a document is sent to protected storage.</p>
-              <div className="mt-11 space-y-3">
-                <div className="h-2 w-full rounded-full bg-[#282725]/10" />
-                <div className="h-2 w-[88%] rounded-full bg-[#282725]/10" />
-                <div className="h-2 w-[95%] rounded-full bg-[#282725]/10" />
-                <div className="h-2 w-[61%] rounded-full bg-[#282725]/10" />
-              </div>
-              <div className="mt-14 border-t border-[#282725]/15 pt-4 text-right font-mono text-[10px] text-[#282725]/50">C-NINE STUDY WORKSPACE</div>
+            <div className="flex max-w-sm flex-col items-center gap-3 rounded-xl border border-amber-300/15 bg-amber-300/[0.05] p-6 text-center">
+              <FileWarning className="size-6 text-amber-100/75" />
+              <p className="text-sm font-medium text-white/85">Secure document access is unavailable</p>
+              <p className="text-xs leading-5 text-white/50">Refresh the workspace or reopen the document to request a new secure file URL.</p>
             </div>
           ) : (
             <div className="flex flex-col items-center gap-3 text-center text-white/45">
@@ -232,8 +226,8 @@ export function PdfViewer({
           <Button variant="ghost" size="icon" className="h-8 w-8 text-white/70 hover:bg-white/[0.08] hover:text-white" onClick={() => setSafePage(page + 1)} disabled={!totalPages || page >= totalPages} aria-label="Next page"><ChevronRight className="size-4" /></Button>
         </div>
         <div className="flex items-center gap-1">
-          <Button variant="ghost" size="icon" className="h-8 w-8 text-white/55 hover:bg-white/[0.08] hover:text-white" onClick={() => setZoom(1.15)} aria-label="Reset zoom"><RotateCcw className="size-3.5" /></Button>
-          <Button variant="ghost" size="icon" className="h-8 w-8 text-white/55 hover:bg-white/[0.08] hover:text-white" aria-label="Open full screen placeholder"><Expand className="size-3.5" /></Button>
+          <Button variant="ghost" size="icon" className="h-8 w-8 text-white/55 hover:bg-white/[0.08] hover:text-white" onClick={() => setZoom(1.15)} disabled={!pdfDocument} aria-label="Reset zoom"><RotateCcw className="size-3.5" /></Button>
+          <Button variant="ghost" size="icon" className="h-8 w-8 text-white/55 hover:bg-white/[0.08] hover:text-white" onClick={openFullscreen} disabled={!pdfDocument} aria-label="Open PDF reader in full screen"><Expand className="size-3.5" /></Button>
         </div>
       </footer>
     </section>

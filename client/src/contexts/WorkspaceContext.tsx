@@ -1,8 +1,4 @@
-import {
-  demoDocuments,
-  demoNotes,
-  type WorkspaceDocument,
-} from "@/lib/workspace";
+import { type WorkspaceDocument } from "@/lib/workspace";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
@@ -21,6 +17,8 @@ type WorkspaceContextValue = {
   railCollapsed: boolean;
   markdown: string;
   activeThreadId?: string;
+  documentsError?: string;
+  notesError?: string;
   setActivePage: (page: number) => void;
   setLeftPanel: (panel: LeftWorkspacePanel) => void;
   setRightPanel: (panel: RightWorkspacePanel) => void;
@@ -33,6 +31,8 @@ type WorkspaceContextValue = {
   deleteDocument: (documentId: string) => void;
   updatePageCount: (documentId: string, pageCount: number) => void;
   restoreChatThread: (documentId: string, threadId?: string) => void;
+  retryDocuments: () => void;
+  retryNotes: () => void;
 };
 
 const WorkspaceContext = createContext<WorkspaceContextValue | null>(null);
@@ -52,7 +52,6 @@ function toWorkspaceDocument(document: StoredDocument): WorkspaceDocument {
   return {
     id: String(document.id),
     filename: document.filename,
-    previewUrl: document.storageUrl,
     sizeBytes: document.sizeBytes,
     pageCount: document.pageCount,
     status: document.status === "uploaded" ? "processing" : document.status,
@@ -77,18 +76,16 @@ function toBase64(file: File) {
 export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
   const { isAuthenticated } = useAuth();
   const utils = trpc.useUtils();
-  const [documents, setDocuments] = useState<WorkspaceDocument[]>(demoDocuments);
-  const [activeDocumentId, setActiveDocumentId] = useState<string | undefined>(demoDocuments[0]?.id);
+  const [documents, setDocuments] = useState<WorkspaceDocument[]>([]);
+  const [activeDocumentId, setActiveDocumentId] = useState<string | undefined>();
   const [activePage, setActivePage] = useState(1);
   const [leftPanel, setLeftPanel] = useState<LeftWorkspacePanel>("viewer");
   const [rightPanel, setRightPanel] = useState<RightWorkspacePanel>("notes");
   const [railCollapsed, setRailCollapsed] = useState(false);
-  const [notesByDocument, setNotesByDocument] = useState<Record<string, string>>(
-    () => Object.fromEntries(demoDocuments.map(document => [document.id, demoNotes]))
-  );
+  const [notesByDocument, setNotesByDocument] = useState<Record<string, string>>({});
   const [activeThreadId, setActiveThreadId] = useState<string | undefined>();
   const activeDocument = documents.find(item => item.id === activeDocumentId);
-  const markdown = activeDocumentId ? notesByDocument[activeDocumentId] ?? demoNotes : demoNotes;
+  const markdown = activeDocumentId ? notesByDocument[activeDocumentId] ?? "" : "";
   const activeDocumentNumber = Number(activeDocumentId);
   const documentListQuery = trpc.documents.list.useQuery(undefined, { enabled: isAuthenticated });
   const noteInput = useMemo(() => ({ documentId: activeDocumentNumber || 1 }), [activeDocumentNumber]);
@@ -120,6 +117,8 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     railCollapsed,
     markdown,
     activeThreadId,
+    documentsError: documentListQuery.error?.message,
+    notesError: noteQuery.error?.message,
     setActivePage,
     setLeftPanel,
     setRightPanel,
@@ -131,7 +130,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     saveNote: () => {
       const documentId = Number(activeDocumentId);
       if (!isAuthenticated || !Number.isInteger(documentId)) {
-        toast.success("Notes saved in this local preview.");
+        toast.error("Select a document before saving notes.");
         return;
       }
       noteMutation.mutate({ documentId, markdown }, {
@@ -149,20 +148,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     },
     uploadDocument: (file) => {
       if (!isAuthenticated) {
-        const previewDocument: WorkspaceDocument = {
-          id: crypto.randomUUID(),
-          filename: file.name,
-          sizeBytes: file.size,
-          pageCount: 0,
-          uploadedAt: new Date().toISOString(),
-          status: "processing",
-          source: "web",
-          previewUrl: URL.createObjectURL(file),
-        };
-        setDocuments(previous => [previewDocument, ...previous]);
-        setActiveDocumentId(previewDocument.id);
-        setActivePage(1);
-        setLeftPanel("viewer");
+        toast.error("Sign in before uploading a PDF.");
         return;
       }
       void toBase64(file).then(base64 => uploadMutation.mutate({ filename: file.name, mimeType: "application/pdf", base64 }, {
@@ -183,8 +169,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
         archiveMutation.mutate({ documentId: storedId }, { onSuccess: () => void utils.documents.list.invalidate(), onError: error => toast.error(error.message) });
         return;
       }
-      setDocuments(previous => previous.map(document => document.id === documentId ? { ...document, status: "archived" } : document));
-      toast.success("Document archived in this workspace preview.");
+      toast.error("Sign in before archiving a document.");
     },
     deleteDocument: (documentId) => {
       const storedId = Number(documentId);
@@ -192,15 +177,10 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
         deleteMutation.mutate({ documentId: storedId }, { onSuccess: () => void utils.documents.list.invalidate(), onError: error => toast.error(error.message) });
         return;
       }
-      setDocuments(previous => previous.filter(document => document.id !== documentId));
-      if (documentId === activeDocumentId) {
-        setActiveDocumentId(documents.find(document => document.id !== documentId)?.id);
-        setActivePage(1);
-      }
-      toast.success("Document removed from this workspace preview.");
+      toast.error("Sign in before deleting a document.");
     },
     updatePageCount: (documentId, pageCount) => {
-      setDocuments(previous => previous.map(document => document.id === documentId ? { ...document, pageCount, status: "ready" } : document));
+      setDocuments(previous => previous.map(document => document.id === documentId ? { ...document, pageCount } : document));
     },
     restoreChatThread: (documentId, threadId) => {
       setActiveDocumentId(documentId);
@@ -208,7 +188,9 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
       setActiveThreadId(threadId);
       setRightPanel("chat");
     },
-  }), [activeDocument, activeDocumentId, activePage, activeThreadId, archiveMutation, deleteMutation, documentListQuery.data, documents, isAuthenticated, leftPanel, markdown, noteMutation, noteQuery.data, railCollapsed, rightPanel, uploadMutation, utils.documents.list, utils.notes.get]);
+    retryDocuments: () => { void documentListQuery.refetch(); },
+    retryNotes: () => { void noteQuery.refetch(); },
+  }), [activeDocument, activeDocumentId, activePage, activeThreadId, archiveMutation, deleteMutation, documentListQuery.data, documentListQuery.error?.message, documentListQuery.refetch, documents, isAuthenticated, leftPanel, markdown, noteMutation, noteQuery.data, noteQuery.error?.message, noteQuery.refetch, railCollapsed, rightPanel, uploadMutation, utils.documents.list, utils.notes.get]);
 
   return <WorkspaceContext.Provider value={value}>{children}</WorkspaceContext.Provider>;
 }

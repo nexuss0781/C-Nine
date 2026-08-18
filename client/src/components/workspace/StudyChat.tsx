@@ -4,7 +4,6 @@ import { useAuth } from "@/_core/hooks/useAuth";
 import { trpc } from "@/lib/trpc";
 import { FileText, RefreshCw, Sparkles } from "lucide-react";
 import { useEffect, useState } from "react";
-import { toast } from "sonner";
 
 type StudyChatProps = {
   documentName?: string;
@@ -13,15 +12,11 @@ type StudyChatProps = {
   threadId?: string;
 };
 
-const initialMessages: Message[] = [
-  { role: "assistant", content: "I’m ready to help you study this document. Ask about the active page, request a short explanation, or turn a section into retrieval questions." },
-];
-
 export function StudyChat({ documentName, documentId, activePage, threadId }: StudyChatProps) {
   const { isAuthenticated } = useAuth();
   const numericDocumentId = Number(documentId);
   const [storedThreadId, setStoredThreadId] = useState<number | undefined>(() => Number(threadId) || undefined);
-  const [messages, setMessages] = useState<Message[]>(initialMessages);
+  const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(false);
   const [retryPrompt, setRetryPrompt] = useState<string | null>(null);
   const [streamingLabel, setStreamingLabel] = useState<string | null>(null);
@@ -63,17 +58,10 @@ export function StudyChat({ documentName, documentId, activePage, threadId }: St
       });
       return;
     }
-
-    window.setTimeout(() => {
-      setLoading(false);
-      setStreamingLabel(null);
-      if (content.toLowerCase().includes("retry")) {
-        setRetryPrompt(content);
-        setErrorMessage("The assistant response did not complete. You can try the same prompt again.");
-        return;
-      }
-      setMessages(previous => [...previous, { role: "assistant", content: `Working from **${documentName ?? "the selected document"}**, page **${activePage}**: this is a frontend preview response. The production AI route will use the authenticated user’s selected model together with bounded document text and active-page context.` }]);
-    }, 700);
+    setLoading(false);
+    setStreamingLabel(null);
+    setRetryPrompt(content);
+    setErrorMessage("Select a document before sending a question.");
   };
 
   return (
@@ -83,9 +71,9 @@ export function StudyChat({ documentName, documentId, activePage, threadId }: St
         <div className="mt-3 flex items-center gap-2 rounded-lg border border-white/[0.09] bg-black/20 px-3 py-2 text-[11px] text-white/55"><FileText className="size-3.5 text-white/65" /><span className="truncate">{documentName ?? "No document selected"}</span><span className="ml-auto shrink-0 font-mono text-white/45">PAGE {activePage}</span></div>
         {threadId ? <p className="mt-2 font-mono text-[10px] uppercase tracking-[0.11em] text-white/34">Restored thread · {threadId}</p> : null}
       </header>
-      <AIChatBox messages={messages} onSendMessage={send} isLoading={loading} height="100%" className="min-h-0 flex-1 rounded-none border-0 bg-transparent shadow-none" placeholder="Ask about this page…" suggestedPrompts={["Explain the central idea on this page", "Make three retrieval questions", "Compare this page to the prior section"]} />
+      {messageQuery.isError ? <div role="alert" className="flex min-h-0 flex-1 flex-col items-center justify-center gap-3 px-6 text-center"><Sparkles className="size-7 stroke-[1.25] text-red-100/70" /><p className="text-sm font-medium text-white/75">Conversation could not be loaded</p><p className="max-w-xs text-xs leading-5 text-white/40">{messageQuery.error.message}</p><Button variant="ghost" size="sm" onClick={() => void messageQuery.refetch()} className="h-8 border border-white/[0.12] px-3 text-xs text-white/70 hover:bg-white/[0.08] hover:text-white">Retry</Button></div> : <AIChatBox messages={messages} onSendMessage={send} isLoading={loading} height="100%" className="min-h-0 flex-1 rounded-none border-0 bg-transparent shadow-none" placeholder={documentId ? "Ask about this page…" : "Select a document to begin"} suggestedPrompts={documentId ? ["Explain the central idea on this page", "Make three retrieval questions", "Compare this page to the prior section"] : []} />}
       {streamingLabel ? <div role="status" className="border-t border-white/[0.08] bg-white/[0.025] px-4 py-2.5 text-xs text-white/52"><span className="mr-2 inline-block size-1.5 animate-pulse rounded-full bg-white/70" />{streamingLabel}</div> : null}
-      {retryPrompt && errorMessage ? <div role="alert" className="flex items-center justify-between gap-3 border-t border-amber-300/15 bg-amber-300/[0.05] px-4 py-2.5 text-xs text-amber-100/80"><span>{errorMessage}</span><Button variant="ghost" size="sm" onClick={() => { if (!isAuthenticated) toast.message("Sign in and configure the assistant to use a live AI model."); send(retryPrompt.replace(/^retry\s*/i, "")); }} className="h-7 px-2 text-xs text-amber-100 hover:bg-amber-100/10 hover:text-amber-50"><RefreshCw className="mr-1.5 size-3.5" />Retry</Button></div> : null}
+      {retryPrompt && errorMessage ? <div role="alert" className="flex items-center justify-between gap-3 border-t border-amber-300/15 bg-amber-300/[0.05] px-4 py-2.5 text-xs text-amber-100/80"><span>{errorMessage}</span>{documentId ? <Button variant="ghost" size="sm" onClick={() => send(retryPrompt)} className="h-7 px-2 text-xs text-amber-100 hover:bg-amber-100/10 hover:text-amber-50"><RefreshCw className="mr-1.5 size-3.5" />Retry</Button> : null}</div> : null}
     </section>
   );
 }
