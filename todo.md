@@ -34,6 +34,17 @@
 - [ ] Prepare a Vercel deployment handoff that documents required build settings, environment variables, storage, database, authentication, and scheduled extraction constraints.
 - [ ] Configure any Vercel-side scheduled extraction trigger after the user publishes the external deployment.
 - [x] Create the requested private C-Nine GitHub repository and push the current production-hardened source state.
+- [ ] Clone and review the nexuss-auth repository skill guidance and integration contract.
+- [ ] Configure NEXUSS_AUTH_KEY as a server-only project secret and add a validation test.
+- [ ] Replace the Manus OAuth backend session flow with the Nexuss Auth authentication flow.
+- [ ] Replace frontend Manus login, logout, and user-session UI with Nexuss Auth equivalents.
+- [ ] Verify that all C-Nine data access remains restricted to the authenticated Nexuss user.
+- [ ] Create and verify the dedicated `c-nine-study` Nexuss Auth project with the exact c-nine.vercel.app origin and callback allowlist.
+- [ ] Implement and test the cross-site one-time handoff callback at `/auth/callback` with replay protection.
+- [ ] Push the completed Nexuss Auth migration source to the private C-Nine GitHub repository.
+- [ ] Prepare a Vercel CLI production-deployment runbook for the user, including required configuration and post-deployment verification steps.
+- [x] Add supported Vercel project configuration for the C-Nine build and route behavior.
+- [x] Document the correct Vercel Application Preset and deployment dashboard values for C-Nine.
 - [x] Remove all demo documents, demo notes, demo activities, preview replies, and preview-only status labels from the runtime experience.
 - [x] Replace nonfunctional notification, search, fullscreen, and placeholder controls with production behavior or remove them from the interface.
 - [x] Require authentication before workspace data operations and show intentional sign-in, empty, loading, and failure states.
