@@ -20,6 +20,15 @@ describe("Vercel deployment configuration", () => {
     ]));
   });
 
+  it("builds a bundled Vercel API entrypoint", async () => {
+    const packageJson = JSON.parse(await readFile(new URL("../package.json", import.meta.url), "utf8")) as {
+      scripts?: { build?: unknown };
+    };
+
+    expect(packageJson.scripts?.build).toContain("esbuild api/index.ts");
+    expect(packageJson.scripts?.build).toContain("--outfile=api/index.js");
+  });
+
   it("documents the Nexuss handoff variables without deploying the management credential", async () => {
     const runbook = await readFile(new URL("../VERCEL_DEPLOYMENT.md", import.meta.url), "utf8");
 
