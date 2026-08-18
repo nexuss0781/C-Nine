@@ -37,7 +37,7 @@ async function startServer() {
   app.use(express.urlencoded({ limit: "50mb", extended: true }));
   registerStorageProxy(app);
   registerOAuthRoutes(app);
-  app.post("/api/scheduled/extractQueuedPdfs", runQueuedPdfExtraction);
+  app.all("/api/scheduled/extractQueuedPdfs", runQueuedPdfExtraction);
   // tRPC API
   app.use(
     "/api/trpc",

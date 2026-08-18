@@ -4,6 +4,7 @@ import { registerOAuthRoutes } from "../server/_core/oauth";
 import { registerStorageProxy } from "../server/_core/storageProxy";
 import { createContext } from "../server/_core/context";
 import { appRouter } from "../server/routers";
+import { runQueuedPdfExtraction } from "../server/scheduledPdfExtraction";
 
 const app = express();
 
@@ -11,6 +12,7 @@ app.use(express.json({ limit: "50mb" }));
 app.use(express.urlencoded({ limit: "50mb", extended: true }));
 registerStorageProxy(app);
 registerOAuthRoutes(app);
+app.all("/api/scheduled/extractQueuedPdfs", runQueuedPdfExtraction);
 app.use(
   "/api/trpc",
   createExpressMiddleware({

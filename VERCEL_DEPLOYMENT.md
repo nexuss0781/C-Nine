@@ -4,7 +4,7 @@
 
 Select **Other** as the Vercel **Application Preset**. C-Nine is a React/Vite frontend paired with an Express and tRPC backend function; it is not a static-only Vite deployment.
 
-Vercel uses `vercel.json` for repository configuration, not YAML. The included configuration installs with pnpm, runs the existing `pnpm build` script, serves the Vite output from `dist/public`, rewrites SPA routes to `index.html`, and sends `/api/*` calls to the Express entry point at `api/index.ts`.
+Vercel uses `vercel.json` for repository configuration, not YAML. The included configuration installs with pnpm, runs the existing `pnpm build` script, serves the Vite output from `dist/public`, rewrites SPA routes to `index.html`, and sends `/api/*` calls to the Express entry point at `api/index.ts`. The exact Nexuss callback is routed to the server before the SPA catch-all rewrite so the one-time handoff token never enters frontend code.
 
 | Vercel dashboard field | Value |
 |---|---|
@@ -26,10 +26,13 @@ Set all values in the **Production** environment before creating the production 
 | `NEXUSS_AUTH_URL` | Nexuss Auth service origin. |
 | `NEXUSS_AUTH_PROJECT_ID` | Dedicated C-Nine Nexuss Auth project ID. |
 | `NEXUSS_AUTH_REDIRECT_URI` | Exact callback: `https://c-nine.vercel.app/auth/callback`. |
-| `NEXUSS_AUTH_KEY` | Project-scoped Nexuss Auth management key; server-side only. |
+| `VITE_NEXUSS_AUTH_URL` | Public Nexuss Auth service origin used only to start browser sign-in navigation. |
+| `VITE_NEXUSS_AUTH_PROJECT_ID` | Public C-Nine Nexuss project identifier used only to start browser sign-in navigation. |
+| `VITE_NEXUSS_AUTH_REDIRECT_URI` | Public exact callback used only to start browser sign-in navigation. |
+| `CRON_SECRET` | Random server-only value used by Vercel to authorize the daily queued PDF extraction route. |
 | External object-storage variables | A Vercel-accessible storage integration for PDF bytes and signed download URLs. |
 
-The current Manus-injected OAuth, storage, and analytics variables are not portable to Vercel. The Nexuss Auth migration must replace the Manus OAuth routes before the production deployment is considered ready.
+`NEXUSS_AUTH_KEY` is a project-management credential used by the trusted CLI workflow only. Do **not** set it in Vercel because the deployed C-Nine handoff exchange does not need it. The current Manus storage proxy must be replaced with a Vercel-accessible object-storage adapter before PDF uploads can work on the external deployment.
 
 ## User-controlled production command
 
@@ -41,7 +44,7 @@ vercel --prod
 
 ## Post-deployment checks
 
-Confirm that `https://c-nine.vercel.app` loads, `/api/trpc` responds, the exact Nexuss callback URL is registered in the Nexuss project, and a signed-in user can create, read, and delete only their own records. Configure the extraction scheduler only after the PDF storage and Nexuss handoff migration are verified.
+Confirm that `https://c-nine.vercel.app` loads, `/api/trpc` responds, the exact Nexuss callback URL is registered in the Nexuss project, and a signed-in user can create, read, and delete only their own records. The included Vercel configuration invokes queued extraction daily at 03:00 UTC; Vercel uses `CRON_SECRET` to authorize the request. Verify the cron invocation in the Vercel dashboard after a production deployment.
 
 ## References
 

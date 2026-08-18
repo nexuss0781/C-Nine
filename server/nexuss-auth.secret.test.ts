@@ -14,5 +14,5 @@ describe("Nexuss Auth project credential", () => {
     expect(response.status).toBe(200);
     const payload = await response.json() as { projects?: unknown[] };
     expect(Array.isArray(payload.projects)).toBe(true);
-  });
+  }, 20_000);
 });

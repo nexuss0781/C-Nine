@@ -4,7 +4,17 @@
   "installCommand": "pnpm install --frozen-lockfile",
   "buildCommand": "pnpm build",
   "outputDirectory": "dist/public",
+  "crons": [
+    {
+      "path": "/api/scheduled/extractQueuedPdfs",
+      "schedule": "0 3 * * *"
+    }
+  ],
   "rewrites": [
+    {
+      "source": "/auth/callback",
+      "destination": "/api/auth/callback"
+    },
     {
       "source": "/api/(.*)",
       "destination": "/api"
