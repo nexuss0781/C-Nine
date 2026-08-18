@@ -41,8 +41,8 @@
 - [ ] Verify that all C-Nine data access remains restricted to the authenticated Nexuss user.
 - [x] Verify and configure the dedicated `c-nine-study` Nexuss Auth project with the exact c-nine.vercel.app origin and callback allowlist.
 - [x] Add route-level handoff callback and replay-protection tests, including secure session-cookie issuance.
-- [ ] Push the completed Nexuss Auth migration source to the private C-Nine GitHub repository.
-- [ ] Review and validate the Vercel CLI runbook against the completed Nexuss Auth architecture.
+- [x] Push the completed Nexuss Auth migration source to the private C-Nine GitHub repository.
+- [x] Review and validate the Vercel CLI runbook against the completed Nexuss Auth architecture.
 - [x] Restore or replace scheduled-extraction authorization so Nexuss Auth migration does not regress queued PDF processing.
 - [ ] Run authenticated browser verification for Nexuss sign-in, session recovery, logout, and protected resource isolation after deployment.
 - [x] Add supported Vercel project configuration for the C-Nine build and route behavior.
