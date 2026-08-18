@@ -22,7 +22,7 @@
 - [x] Implement model catalog retrieval, persisted selection, and secure AI chat proxying.
 - [x] Add frontend and server tests for key interaction, authorization, validation, and error paths.
 - [x] Complete workspace-level keyboard-flow and focus-state validation across navigation, reading, library, and settings controls.
-- [ ] Save a completed project checkpoint after the first delivered engineering phase.
+- [x] Save a completed project checkpoint after the first delivered engineering phase.
 - [x] Implement the approved MySQL-compatible Drizzle schema and migration for user-scoped C-Nine workspace data.
 - [x] Replace the remaining mock activity history with authenticated document and chat-thread persistence.
 - [x] Implement protected PDF upload storage, file validation, and processing-state transitions using the managed storage service.
@@ -31,18 +31,20 @@
 - [x] Add an ownership-validated PDF file-access procedure that returns a signed URL only to the document owner.
 - [ ] Deploy the scheduled extraction handler and create the managed periodic job that processes queued PDFs automatically.
 - [ ] Verify upload-to-extraction-to-page-context processing end to end with an authenticated test PDF.
-- [ ] Prepare a Vercel deployment handoff that documents required build settings, environment variables, storage, database, authentication, and scheduled extraction constraints.
+- [x] Prepare a Vercel deployment handoff that documents required build settings, environment variables, storage, database, authentication, and scheduled extraction constraints.
 - [ ] Configure any Vercel-side scheduled extraction trigger after the user publishes the external deployment.
 - [x] Create the requested private C-Nine GitHub repository and push the current production-hardened source state.
-- [ ] Clone and review the nexuss-auth repository skill guidance and integration contract.
-- [ ] Configure NEXUSS_AUTH_KEY as a server-only project secret and add a validation test.
-- [ ] Replace the Manus OAuth backend session flow with the Nexuss Auth authentication flow.
-- [ ] Replace frontend Manus login, logout, and user-session UI with Nexuss Auth equivalents.
+- [x] Clone and review the nexuss-auth repository skill guidance and integration contract.
+- [x] Configure NEXUSS_AUTH_KEY as a server-only project secret and add a validation test.
+- [ ] Verify a real Nexuss-authenticated backend session against protected tRPC procedures after deployment.
+- [ ] Complete and validate the Nexuss Auth frontend login, callback, refresh, and logout flow.
 - [ ] Verify that all C-Nine data access remains restricted to the authenticated Nexuss user.
-- [ ] Create and verify the dedicated `c-nine-study` Nexuss Auth project with the exact c-nine.vercel.app origin and callback allowlist.
-- [ ] Implement and test the cross-site one-time handoff callback at `/auth/callback` with replay protection.
+- [x] Verify and configure the dedicated `c-nine-study` Nexuss Auth project with the exact c-nine.vercel.app origin and callback allowlist.
+- [x] Add route-level handoff callback and replay-protection tests, including secure session-cookie issuance.
 - [ ] Push the completed Nexuss Auth migration source to the private C-Nine GitHub repository.
-- [ ] Prepare a Vercel CLI production-deployment runbook for the user, including required configuration and post-deployment verification steps.
+- [ ] Review and validate the Vercel CLI runbook against the completed Nexuss Auth architecture.
+- [x] Restore or replace scheduled-extraction authorization so Nexuss Auth migration does not regress queued PDF processing.
+- [ ] Run authenticated browser verification for Nexuss sign-in, session recovery, logout, and protected resource isolation after deployment.
 - [x] Add supported Vercel project configuration for the C-Nine build and route behavior.
 - [x] Document the correct Vercel Application Preset and deployment dashboard values for C-Nine.
 - [x] Remove all demo documents, demo notes, demo activities, preview replies, and preview-only status labels from the runtime experience.

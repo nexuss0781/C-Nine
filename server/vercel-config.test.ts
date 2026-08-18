@@ -14,8 +14,20 @@ describe("Vercel deployment configuration", () => {
     expect(config.buildCommand).toBe("pnpm build");
     expect(config.outputDirectory).toBe("dist/public");
     expect(config.rewrites).toEqual(expect.arrayContaining([
+      { source: "/auth/callback", destination: "/api/auth/callback" },
       { source: "/api/(.*)", destination: "/api" },
       { source: "/(.*)", destination: "/index.html" },
     ]));
+  });
+
+  it("documents the Nexuss handoff variables without deploying the management credential", async () => {
+    const runbook = await readFile(new URL("../VERCEL_DEPLOYMENT.md", import.meta.url), "utf8");
+
+    expect(runbook).toContain("Application Preset | **Other**");
+    expect(runbook).toContain("VITE_NEXUSS_AUTH_URL");
+    expect(runbook).toContain("VITE_NEXUSS_AUTH_PROJECT_ID");
+    expect(runbook).toContain("VITE_NEXUSS_AUTH_REDIRECT_URI");
+    expect(runbook).toContain("CRON_SECRET");
+    expect(runbook).toContain("Do **not** set it in Vercel");
   });
 });
