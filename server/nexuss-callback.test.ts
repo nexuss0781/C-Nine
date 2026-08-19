@@ -1,10 +1,14 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-const mocks = vi.hoisted(() => ({
-  exchangeNexussHandoff: vi.fn(),
-  createSessionToken: vi.fn(),
-  upsertUser: vi.fn(),
-}));
+const mocks = vi.hoisted(() => {
+  process.env.DATABASE_URL = "mysql://test-user:test-password@localhost/test";
+  process.env.JWT_SECRET = "test-session-secret";
+  return {
+    exchangeNexussHandoff: vi.fn(),
+    createSessionToken: vi.fn(),
+    upsertUser: vi.fn(),
+  };
+});
 
 vi.mock("./_core/sdk", () => ({ sdk: { exchangeNexussHandoff: mocks.exchangeNexussHandoff, createSessionToken: mocks.createSessionToken } }));
 vi.mock("./db", () => ({ upsertUser: mocks.upsertUser }));
