@@ -25,7 +25,7 @@ describe("Vercel deployment configuration", () => {
       scripts?: { build?: unknown };
     };
 
-    expect(packageJson.scripts?.build).toContain("esbuild api/index.ts");
+    expect(packageJson.scripts?.build).toContain("esbuild api/source.ts");
     expect(packageJson.scripts?.build).toContain("--outfile=api/index.js");
   });
 
