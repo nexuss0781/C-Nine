@@ -3,6 +3,7 @@ import type { Express, Request, Response } from "express";
 import * as db from "../db";
 import { getSessionCookieOptions } from "./cookies";
 import { sdk } from "./sdk";
+import { ENV } from "./env";
 
 function getQueryParam(req: Request, key: string): string | undefined {
   const value = req.query[key];
@@ -21,6 +22,13 @@ export async function completeNexussHandoff(req: Request, res: Response) {
   }
 
   try {
+    if (!process.env.DATABASE_URL) {
+      throw new Error("DATABASE_URL is not configured; cannot persist the authenticated user");
+    }
+    if (!ENV.cookieSecret) {
+      throw new Error("JWT_SECRET is not configured; cannot create the application session");
+    }
+
     const identity = await sdk.exchangeNexussHandoff(handoffToken);
     const openId = `nexuss:${identity.id}`;
 

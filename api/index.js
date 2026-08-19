@@ -340,7 +340,7 @@ function getSessionCookieOptions(req) {
     httpOnly: true,
     path: "/",
     sameSite: "none",
-    secure: isSecureRequest(req)
+    secure: ENV.isProduction || isSecureRequest(req)
   };
 }
 
@@ -429,6 +429,12 @@ async function completeNexussHandoff(req, res) {
     return;
   }
   try {
+    if (!process.env.DATABASE_URL) {
+      throw new Error("DATABASE_URL is not configured; cannot persist the authenticated user");
+    }
+    if (!ENV.cookieSecret) {
+      throw new Error("JWT_SECRET is not configured; cannot create the application session");
+    }
     const identity = await sdk.exchangeNexussHandoff(handoffToken);
     const openId = `nexuss:${identity.id}`;
     await upsertUser({

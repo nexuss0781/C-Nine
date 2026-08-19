@@ -1,5 +1,7 @@
 import type { CookieOptions, Request } from "express";
 
+import { ENV } from "./env";
+
 const LOCAL_HOSTS = new Set(["localhost", "127.0.0.1", "::1"]);
 
 function isIpAddress(host: string) {
@@ -43,6 +45,6 @@ export function getSessionCookieOptions(
     httpOnly: true,
     path: "/",
     sameSite: "none",
-    secure: isSecureRequest(req),
+    secure: ENV.isProduction || isSecureRequest(req),
   };
 }
