@@ -1,6 +1,6 @@
 import { createServer } from "node:http";
 import { afterEach, describe, expect, it } from "vitest";
-import app from "../api/index";
+import app from "../api/source";
 
 const servers: Array<ReturnType<typeof createServer>> = [];
 
