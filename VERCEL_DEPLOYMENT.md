@@ -25,10 +25,10 @@ Set all values in the **Production** environment before creating the production 
 | `JWT_SECRET` | Application session signing secret. |
 | `NEXUSS_AUTH_URL` | Nexuss Auth service origin. |
 | `NEXUSS_AUTH_PROJECT_ID` | Dedicated C-Nine Nexuss Auth project ID. |
-| `NEXUSS_AUTH_REDIRECT_URI` | Exact callback: `https://c-nine-study.vercel.app/auth/callback` for the current production deployment. Add both this URI and the legacy `https://c-nine.vercel.app/auth/callback` to the Nexuss Auth project allowlist if both domains are used. |
+| `NEXUSS_AUTH_REDIRECT_URI` | Exact callback: `https://c-nine-gamma.vercel.app/auth/callback` for the current production deployment. This exact URI must be allowlisted in the Nexuss Auth project. |
 | `VITE_NEXUSS_AUTH_URL` | Public Nexuss Auth service origin, normally `https://nexuss-auth.vercel.app`. |
 | `VITE_NEXUSS_AUTH_PROJECT_ID` | Public C-Nine Nexuss project identifier: `c-nine-study`. |
-| `VITE_NEXUSS_AUTH_REDIRECT_URI` | Public exact callback: `https://c-nine-study.vercel.app/auth/callback`. This exact URI must be allowlisted by Nexuss Auth; add the legacy callback separately if that domain is also used. |
+| `VITE_NEXUSS_AUTH_REDIRECT_URI` | Public exact callback: `https://c-nine-gamma.vercel.app/auth/callback`. This exact URI must be allowlisted by Nexuss Auth. |
 | `CRON_SECRET` | Random server-only value used by Vercel to authorize the daily queued PDF extraction route. |
 | External object-storage variables | A Vercel-accessible storage integration for PDF bytes and signed download URLs. |
 
@@ -44,7 +44,7 @@ vercel --prod
 
 ## Post-deployment checks
 
-Confirm that `https://c-nine-study.vercel.app` loads, `/api/trpc` responds with JSON, `https://c-nine-study.vercel.app/auth/callback` is registered in the Nexuss project, and a signed-in user can create, read, and delete only their own records. If `c-nine.vercel.app` remains an active alias, register `https://c-nine.vercel.app/auth/callback` separately; redirect URI matching is exact, including scheme, host, path, and trailing slash. The included Vercel configuration invokes queued extraction daily at 03:00 UTC; Vercel uses `CRON_SECRET` to authorize the request. Verify the cron invocation in the Vercel dashboard after a production deployment.
+Confirm that `https://c-nine-gamma.vercel.app` loads, `/api/trpc` responds with JSON, `https://c-nine-gamma.vercel.app/auth/callback` is registered in the Nexuss project, and a signed-in user can create, read, and delete only their own records. Redirect URI matching is exact, including scheme, host, path, and trailing slash. The included Vercel configuration invokes queued extraction daily at 03:00 UTC; Vercel uses `CRON_SECRET` to authorize the request. Verify the cron invocation in the Vercel dashboard after a production deployment.
 
 ## References
 
