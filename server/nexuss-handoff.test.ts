@@ -6,13 +6,13 @@ describe("Nexuss Auth cross-site handoff", () => {
     const loginUrl = buildNexussLoginUrl(
       "https://nexuss-auth.vercel.app",
       "c-nine-study",
-      "https://c-nine.vercel.app/auth/callback"
+      "https://c-nine-gamma.vercel.app/auth/callback"
     );
     const parsed = new URL(loginUrl);
 
     expect(parsed.pathname).toBe("/oauth/start/google");
     expect(parsed.searchParams.get("project_id")).toBe("c-nine-study");
-    expect(parsed.searchParams.get("redirect_uri")).toBe("https://c-nine.vercel.app/auth/callback");
+    expect(parsed.searchParams.get("redirect_uri")).toBe("https://c-nine-gamma.vercel.app/auth/callback");
     expect(parsed.searchParams.get("handoff")).toBe("1");
   });
 
@@ -20,7 +20,7 @@ describe("Nexuss Auth cross-site handoff", () => {
     const loginUrl = buildNexussLoginUrl(
       "https://nexuss-auth.vercel.app",
       "c-nine-study",
-      "https://c-nine.vercel.app/auth/callback"
+      "https://c-nine-gamma.vercel.app/auth/callback"
     );
     expect(loginUrl).not.toContain("nxa_");
   });

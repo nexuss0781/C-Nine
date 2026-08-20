@@ -39,7 +39,7 @@
 - [ ] Verify a real Nexuss-authenticated backend session against protected tRPC procedures after deployment.
 - [ ] Complete and validate the Nexuss Auth frontend login, callback, refresh, and logout flow.
 - [ ] Verify that all C-Nine data access remains restricted to the authenticated Nexuss user.
-- [x] Verify and configure the dedicated `c-nine-study` Nexuss Auth project with the exact c-nine.vercel.app origin and callback allowlist.
+- [ ] Configure the dedicated `c-nine-study` Nexuss Auth project with the exact `c-nine-gamma.vercel.app` origin and callback allowlist.
 - [x] Add route-level handoff callback and replay-protection tests, including secure session-cookie issuance.
 - [x] Push the completed Nexuss Auth migration source to the private C-Nine GitHub repository.
 - [x] Review and validate the Vercel CLI runbook against the completed Nexuss Auth architecture.
