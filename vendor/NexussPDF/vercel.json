@@ -1,0 +1,9 @@
+{
+  "functions": {
+    "api/extract.js": {
+      "runtime": "nodejs22.x",
+      "memory": 3008,
+      "maxDuration": 300
+    }
+  }
+}

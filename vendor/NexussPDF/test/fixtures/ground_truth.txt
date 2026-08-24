@@ -1,0 +1,4 @@
+NexussPDF benchmark page one. Selectable text should be extracted exactly.
+NexussPDF benchmark page two. Page headings and ordering must be preserved.
+NexussPDF OCR page one. Scanned text.
+NexussPDF OCR page two. Quality test.

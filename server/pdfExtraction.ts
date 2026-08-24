@@ -1,29 +1,19 @@
-import { addProcessingEvent, getDocumentForUser, listDocumentsAwaitingExtraction, updateDocumentProcessingForUser, upsertExtractedTextForUser, type PageMapEntry } from "./db";
+import { addProcessingEvent, getDocumentForUser, listDocumentsAwaitingExtraction, updateDocumentProcessingForUser, upsertExtractedTextForUser } from "./db";
 import { storageGetSignedUrl } from "./storage";
+import { extractPdfText as extractNexussPdfText } from "./pdfEngine";
 
-type PdfJsModule = typeof import("pdfjs-dist/legacy/build/pdf.mjs");
+export const NEXUSSPDF_EXTRACTOR_VERSION = "nexusspdf-pdfjs-6.2-tesseractjs-7";
 
-async function loadPdfJs(): Promise<PdfJsModule> {
-  return import("pdfjs-dist/legacy/build/pdf.mjs");
-}
-
+/**
+ * C-NINE PDF extraction boundary backed by the standalone NexussPDF engine.
+ * Selectable PDFs use PDF.js; image-only PDFs use embedded-image OCR.
+ */
 export async function extractPdfText(bytes: Uint8Array) {
-  const pdfjs = await loadPdfJs();
-  const loadingTask = pdfjs.getDocument({ data: bytes, disableFontFace: true, useWorkerFetch: false });
-  const pdf = await loadingTask.promise;
-  const pageMap: PageMapEntry[] = [];
-
-  try {
-    for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber += 1) {
-      const page = await pdf.getPage(pageNumber);
-      const content = await page.getTextContent();
-      const text = content.items.map(item => "str" in item ? item.str : "").join(" ").replace(/\s+/g, " ").trim();
-      pageMap.push({ page: pageNumber, text });
-    }
-    return { pageCount: pdf.numPages, pageMap, text: pageMap.map(entry => `Page ${entry.page}\n${entry.text}`).join("\n\n") };
-  } finally {
-    await loadingTask.destroy();
-  }
+  return extractNexussPdfText(bytes, {
+    ocr: true,
+    language: process.env.PDF_OCR_LANGUAGE ?? "eng",
+    keepWorkerWarm: process.env.VERCEL === "1",
+  });
 }
 
 async function downloadStoredPdf(storageKey: string) {
@@ -37,7 +27,7 @@ async function processOneDocument(document: Awaited<ReturnType<typeof listDocume
   const ownedDocument = await getDocumentForUser(document.userId, document.id);
   if (!ownedDocument || ownedDocument.status !== "processing") return { skipped: true as const, documentId: document.id };
 
-  await addProcessingEvent({ userId: document.userId, documentId: document.id, stage: "extract", status: "running", detail: "Periodic processor started extraction." });
+  await addProcessingEvent({ userId: document.userId, documentId: document.id, stage: "extract", status: "running", detail: "NexussPDF processor started extraction." });
   try {
     const bytes = await downloadStoredPdf(document.storageKey);
     const extracted = await extractPdfText(bytes);
@@ -47,9 +37,9 @@ async function processOneDocument(document: Awaited<ReturnType<typeof listDocume
       extractedText: extracted.text,
       pageMap: extracted.pageMap,
       pageCount: extracted.pageCount,
-      extractorVersion: "pdfjs-6.2",
+      extractorVersion: extracted.extractorVersion ?? NEXUSSPDF_EXTRACTOR_VERSION,
     });
-    return { skipped: false as const, documentId: document.id, pageCount: extracted.pageCount };
+    return { skipped: false as const, documentId: document.id, pageCount: extracted.pageCount, method: extracted.method };
   } catch (error) {
     const detail = error instanceof Error ? error.message.slice(0, 900) : "Unknown PDF extraction failure";
     await updateDocumentProcessingForUser({ userId: document.userId, documentId: document.id, status: "failed" });

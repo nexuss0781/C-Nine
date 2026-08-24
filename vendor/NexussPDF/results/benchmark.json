@@ -1,0 +1,35 @@
+
+> nexuss-pdf@0.1.0 benchmark
+> node scripts/benchmark.mjs
+
+Warning: UnknownErrorException: Ensure that the `standardFontDataUrl` API parameter is provided.
+Warning: UnknownErrorException: Ensure that the `standardFontDataUrl` API parameter is provided.
+Warning: UnknownErrorException: Ensure that the `standardFontDataUrl` API parameter is provided.
+{
+  "generated_at": "2026-08-24T02:43:34.762Z",
+  "node": "v22.13.0",
+  "rows": [
+    {
+      "name": "selectable",
+      "bytes": 1926,
+      "pages": 2,
+      "method": "pdfjs",
+      "characters": 173,
+      "min_ms": 3.7953240000000505,
+      "median_ms": 6.457126999999957,
+      "max_ms": 99.56798800000001,
+      "throughput_mb_s": 0.28445727231297285
+    },
+    {
+      "name": "scanned-ocr",
+      "bytes": 52494,
+      "pages": 2,
+      "method": "ocr",
+      "characters": 98,
+      "min_ms": 541.881957,
+      "median_ms": 545.2168600000001,
+      "max_ms": 552.954989,
+      "throughput_mb_s": 0.09182067400745765
+    }
+  ]
+}

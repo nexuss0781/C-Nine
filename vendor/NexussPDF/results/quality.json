@@ -1,0 +1,23 @@
+Warning: UnknownErrorException: Ensure that the `standardFontDataUrl` API parameter is provided.
+{
+  "rows": [
+    {
+      "name": "selectable",
+      "method": "pdfjs",
+      "expected_chars": 146,
+      "actual_chars": 146,
+      "edit_distance": 0,
+      "quality_percent": 100,
+      "contains_all_expected_phrases": true
+    },
+    {
+      "name": "scanned-ocr",
+      "method": "ocr",
+      "expected_chars": 71,
+      "actual_chars": 71,
+      "edit_distance": 0,
+      "quality_percent": 100,
+      "contains_all_expected_phrases": true
+    }
+  ]
+}
