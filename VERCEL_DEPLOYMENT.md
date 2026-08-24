@@ -21,7 +21,7 @@ Set all values in the **Production** environment before creating the production 
 
 | Variable | Use |
 |---|---|
-| `DATABASE_URL` | Externally reachable, serverless-safe MySQL connection string for the Drizzle data store. |
+| `DATABASE_URL` | Canonical `parad://` connection URL for the encrypted Paradox Drizzle data store. Keep the complete value in Vercel as a server-only secret. |
 | `JWT_SECRET` | Application session signing secret. |
 | `NEXUSS_AUTH_URL` | Nexuss Auth service origin. |
 | `NEXUSS_AUTH_PROJECT_ID` | Dedicated C-Nine Nexuss Auth project ID. |

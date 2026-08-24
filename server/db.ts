@@ -1,5 +1,5 @@
-import { and, asc, desc, eq } from "drizzle-orm";
-import { drizzle } from "drizzle-orm/mysql2";
+import { and, asc, desc, eq, sql } from "drizzle-orm";
+import { drizzle } from "parad/drizzle";
 import {
   aiSettings,
   chatMessages,
@@ -13,7 +13,31 @@ import {
 } from "../drizzle/schema";
 import { ENV } from "./_core/env";
 
-let _db: ReturnType<typeof drizzle> | null = null;
+type CnineDb = Awaited<ReturnType<typeof drizzle>>;
+let _db: CnineDb | null = null;
+
+async function ensureParadoxSchema(db: CnineDb) {
+  const statements = [
+    `CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY AUTOINCREMENT, openId TEXT NOT NULL UNIQUE, name TEXT, email TEXT, loginMethod TEXT, role TEXT NOT NULL DEFAULT 'user', createdAt INTEGER NOT NULL DEFAULT (strftime('%s','now') * 1000), updatedAt INTEGER NOT NULL DEFAULT (strftime('%s','now') * 1000), lastSignedIn INTEGER NOT NULL DEFAULT (strftime('%s','now') * 1000))`,
+    `CREATE TABLE IF NOT EXISTS documents (id INTEGER PRIMARY KEY AUTOINCREMENT, userId INTEGER NOT NULL, filename TEXT NOT NULL, storageKey TEXT NOT NULL, storageUrl TEXT NOT NULL, mimeType TEXT NOT NULL DEFAULT 'application/pdf', sizeBytes INTEGER NOT NULL, pageCount INTEGER NOT NULL DEFAULT 0, status TEXT NOT NULL DEFAULT 'uploaded', source TEXT NOT NULL DEFAULT 'web', archivedAt INTEGER, createdAt INTEGER NOT NULL DEFAULT (strftime('%s','now') * 1000), updatedAt INTEGER NOT NULL DEFAULT (strftime('%s','now') * 1000))`,
+    `CREATE TABLE IF NOT EXISTS documentTexts (id INTEGER PRIMARY KEY AUTOINCREMENT, documentId INTEGER NOT NULL UNIQUE, userId INTEGER NOT NULL, extractedText TEXT, pageMapJson TEXT, extractorVersion TEXT, createdAt INTEGER NOT NULL DEFAULT (strftime('%s','now') * 1000), updatedAt INTEGER NOT NULL DEFAULT (strftime('%s','now') * 1000))`,
+    `CREATE TABLE IF NOT EXISTS notes (id INTEGER PRIMARY KEY AUTOINCREMENT, userId INTEGER NOT NULL, documentId INTEGER NOT NULL, title TEXT NOT NULL DEFAULT 'Study notes', markdown TEXT NOT NULL, createdAt INTEGER NOT NULL DEFAULT (strftime('%s','now') * 1000), updatedAt INTEGER NOT NULL DEFAULT (strftime('%s','now') * 1000), UNIQUE(userId, documentId))`,
+    `CREATE TABLE IF NOT EXISTS chatThreads (id INTEGER PRIMARY KEY AUTOINCREMENT, userId INTEGER NOT NULL, documentId INTEGER NOT NULL, title TEXT NOT NULL DEFAULT 'New study thread', createdAt INTEGER NOT NULL DEFAULT (strftime('%s','now') * 1000), updatedAt INTEGER NOT NULL DEFAULT (strftime('%s','now') * 1000))`,
+    `CREATE TABLE IF NOT EXISTS chatMessages (id INTEGER PRIMARY KEY AUTOINCREMENT, userId INTEGER NOT NULL, threadId INTEGER NOT NULL, documentId INTEGER NOT NULL, role TEXT NOT NULL, content TEXT NOT NULL, pageNumber INTEGER, model TEXT, createdAt INTEGER NOT NULL DEFAULT (strftime('%s','now') * 1000))`,
+    `CREATE TABLE IF NOT EXISTS aiSettings (id INTEGER PRIMARY KEY AUTOINCREMENT, userId INTEGER NOT NULL UNIQUE, baseUrl TEXT, encryptedApiKey TEXT, keyMask TEXT, selectedModel TEXT, createdAt INTEGER NOT NULL DEFAULT (strftime('%s','now') * 1000), updatedAt INTEGER NOT NULL DEFAULT (strftime('%s','now') * 1000))`,
+    `CREATE TABLE IF NOT EXISTS processingEvents (id INTEGER PRIMARY KEY AUTOINCREMENT, userId INTEGER NOT NULL, documentId INTEGER NOT NULL, stage TEXT NOT NULL, status TEXT NOT NULL, attempt INTEGER NOT NULL DEFAULT 1, detail TEXT, createdAt INTEGER NOT NULL DEFAULT (strftime('%s','now') * 1000), completedAt INTEGER)`,
+    `CREATE INDEX IF NOT EXISTS documents_user_updated_idx ON documents(userId, updatedAt)`,
+    `CREATE INDEX IF NOT EXISTS documents_user_status_idx ON documents(userId, status)`,
+    `CREATE INDEX IF NOT EXISTS document_text_user_idx ON documentTexts(userId)`,
+    `CREATE INDEX IF NOT EXISTS notes_document_idx ON notes(documentId)`,
+    `CREATE INDEX IF NOT EXISTS threads_user_document_updated_idx ON chatThreads(userId, documentId, updatedAt)`,
+    `CREATE INDEX IF NOT EXISTS messages_thread_created_idx ON chatMessages(threadId, createdAt)`,
+    `CREATE INDEX IF NOT EXISTS messages_user_document_idx ON chatMessages(userId, documentId)`,
+    `CREATE INDEX IF NOT EXISTS processing_user_document_created_idx ON processingEvents(userId, documentId, createdAt)`,
+  ];
+  for (const statement of statements) await db.run(sql.raw(statement));
+}
+let _dbPromise: Promise<CnineDb | null> | null = null;
 
 export type PageMapEntry = {
   page: number;
@@ -21,48 +45,58 @@ export type PageMapEntry = {
 };
 
 export async function getDb() {
-  if (!_db && process.env.DATABASE_URL) {
-    try {
-      _db = drizzle(process.env.DATABASE_URL);
-    } catch (error) {
-      console.warn("[Database] Failed to connect:", error);
-      _db = null;
-    }
+  if (_db) return _db;
+  if (!process.env.DATABASE_URL) return null;
+  if (!process.env.DATABASE_URL.startsWith("parad://")) {
+    throw new Error("DATABASE_URL must be a canonical parad:// URL");
   }
-  return _db;
+  if (!_dbPromise) {
+    _dbPromise = drizzle(process.env.DATABASE_URL, {
+      schema: { users, documents, documentTexts, notes, chatThreads, chatMessages, aiSettings, processingEvents },
+    }).then(async db => {
+      await ensureParadoxSchema(db);
+      _db = db;
+      return db;
+    }).catch(error => {
+      console.warn("[Database] Failed to initialize Paradox:", error instanceof Error ? error.message : String(error));
+      _dbPromise = null;
+      return null;
+    });
+  }
+  return _dbPromise;
 }
 
 async function requireDb() {
   const db = await getDb();
-  if (!db) throw new Error("Database connection is unavailable");
+  if (!db) throw new Error("Paradox database connection is unavailable");
   return db;
 }
 
 export async function upsertUser(user: InsertUser): Promise<void> {
   if (!user.openId) throw new Error("User openId is required for upsert");
-  const db = await getDb();
-  if (!db) return;
-
-  const values: InsertUser = { openId: user.openId };
-  const updateSet: Record<string, unknown> = {};
-  const textFields = ["name", "email", "loginMethod"] as const;
-
-  for (const field of textFields) {
-    if (user[field] !== undefined) {
-      values[field] = user[field] ?? null;
-      updateSet[field] = user[field] ?? null;
-    }
-  }
-  values.lastSignedIn = user.lastSignedIn ?? new Date();
-  updateSet.lastSignedIn = values.lastSignedIn;
-  values.role = user.role ?? (user.openId === ENV.ownerOpenId ? "admin" : "user");
-  updateSet.role = values.role;
-  await db.insert(users).values(values).onDuplicateKeyUpdate({ set: updateSet });
+  const db = await requireDb();
+  const values = {
+    openId: user.openId,
+    name: user.name ?? null,
+    email: user.email ?? null,
+    loginMethod: user.loginMethod ?? null,
+    lastSignedIn: user.lastSignedIn ?? new Date(),
+    role: user.role ?? (user.openId === ENV.ownerOpenId ? "admin" : "user"),
+  } as const;
+  await db.insert(users).values(values).onConflictDoUpdate({
+    target: users.openId,
+    set: {
+      name: values.name,
+      email: values.email,
+      loginMethod: values.loginMethod,
+      lastSignedIn: values.lastSignedIn,
+      role: values.role,
+    },
+  });
 }
 
 export async function getUserByOpenId(openId: string) {
-  const db = await getDb();
-  if (!db) return undefined;
+  const db = await requireDb();
   const result = await db.select().from(users).where(eq(users.openId, openId)).limit(1);
   return result[0];
 }
@@ -93,8 +127,9 @@ export async function createDocumentForUser(input: {
   source?: "web" | "telegram";
 }) {
   const db = await requireDb();
-  const result = await db.insert(documents).values({ ...input, status: "processing", source: input.source ?? "web" });
-  const id = Number(result[0].insertId);
+  const result = await db.insert(documents).values({ ...input, status: "processing", source: input.source ?? "web" }).returning({ id: documents.id });
+  const id = Number(result[0]?.id);
+  if (!id) throw new Error("Paradox did not return a document id");
   await addProcessingEvent({ userId: input.userId, documentId: id, stage: "upload", status: "succeeded", detail: "PDF stored securely." });
   await addProcessingEvent({ userId: input.userId, documentId: id, stage: "extract", status: "queued", detail: "Text extraction is queued." });
   return getDocumentForUser(input.userId, id);
@@ -107,13 +142,13 @@ export async function updateDocumentProcessingForUser(input: {
   pageCount?: number;
 }) {
   const db = await requireDb();
-  await db.update(documents).set({ status: input.status, pageCount: input.pageCount }).where(and(eq(documents.id, input.documentId), eq(documents.userId, input.userId)));
+  await db.update(documents).set({ status: input.status, updatedAt: new Date(), ...(input.pageCount === undefined ? {} : { pageCount: input.pageCount }) }).where(and(eq(documents.id, input.documentId), eq(documents.userId, input.userId)));
   return getDocumentForUser(input.userId, input.documentId);
 }
 
 export async function archiveDocumentForUser(userId: number, documentId: number) {
   const db = await requireDb();
-  await db.update(documents).set({ status: "archived", archivedAt: new Date() }).where(and(eq(documents.id, documentId), eq(documents.userId, userId)));
+  await db.update(documents).set({ status: "archived", archivedAt: new Date(), updatedAt: new Date() }).where(and(eq(documents.id, documentId), eq(documents.userId, userId)));
   return getDocumentForUser(userId, documentId);
 }
 
@@ -135,16 +170,19 @@ export async function getNoteForUser(userId: number, documentId: number) {
 
 export async function upsertNoteForUser(input: { userId: number; documentId: number; title?: string; markdown: string }) {
   const db = await requireDb();
-  await db.insert(notes).values({ ...input, title: input.title ?? "Study notes" }).onDuplicateKeyUpdate({
-    set: { markdown: input.markdown, title: input.title ?? "Study notes", updatedAt: new Date() },
+  const title = input.title ?? "Study notes";
+  await db.insert(notes).values({ ...input, title }).onConflictDoUpdate({
+    target: [notes.userId, notes.documentId],
+    set: { markdown: input.markdown, title, updatedAt: new Date() },
   });
   return getNoteForUser(input.userId, input.documentId);
 }
 
 export async function createThreadForUser(input: { userId: number; documentId: number; title?: string }) {
   const db = await requireDb();
-  const result = await db.insert(chatThreads).values({ ...input, title: input.title ?? "New study thread" });
-  const id = Number(result[0].insertId);
+  const result = await db.insert(chatThreads).values({ ...input, title: input.title ?? "New study thread" }).returning({ id: chatThreads.id });
+  const id = Number(result[0]?.id);
+  if (!id) throw new Error("Paradox did not return a thread id");
   return getThreadForUser(input.userId, id);
 }
 
@@ -175,9 +213,11 @@ export async function addMessageForUser(input: {
   model?: string;
 }) {
   const db = await requireDb();
-  const result = await db.insert(chatMessages).values(input);
+  const result = await db.insert(chatMessages).values(input).returning({ id: chatMessages.id });
   await db.update(chatThreads).set({ updatedAt: new Date() }).where(and(eq(chatThreads.id, input.threadId), eq(chatThreads.userId, input.userId)));
-  return Number(result[0].insertId);
+  const id = Number(result[0]?.id);
+  if (!id) throw new Error("Paradox did not return a message id");
+  return id;
 }
 
 export async function getAiSettingsForUser(userId: number) {
@@ -194,12 +234,13 @@ export async function upsertAiSettingsForUser(input: {
   selectedModel?: string;
 }) {
   const db = await requireDb();
-  await db.insert(aiSettings).values(input).onDuplicateKeyUpdate({
+  await db.insert(aiSettings).values(input).onConflictDoUpdate({
+    target: aiSettings.userId,
     set: {
-      baseUrl: input.baseUrl,
-      encryptedApiKey: input.encryptedApiKey,
-      keyMask: input.keyMask,
-      selectedModel: input.selectedModel,
+      baseUrl: input.baseUrl ?? null,
+      encryptedApiKey: input.encryptedApiKey ?? null,
+      keyMask: input.keyMask ?? null,
+      selectedModel: input.selectedModel ?? null,
       updatedAt: new Date(),
     },
   });
@@ -215,17 +256,19 @@ export async function upsertExtractedTextForUser(input: {
   extractorVersion: string;
 }) {
   const db = await requireDb();
-  await db.insert(documentTexts).values({
+  const values = {
     userId: input.userId,
     documentId: input.documentId,
     extractedText: input.extractedText,
     pageMapJson: JSON.stringify(input.pageMap),
     extractorVersion: input.extractorVersion,
-  }).onDuplicateKeyUpdate({
+  };
+  await db.insert(documentTexts).values(values).onConflictDoUpdate({
+    target: documentTexts.documentId,
     set: {
-      extractedText: input.extractedText,
-      pageMapJson: JSON.stringify(input.pageMap),
-      extractorVersion: input.extractorVersion,
+      extractedText: values.extractedText,
+      pageMapJson: values.pageMapJson,
+      extractorVersion: values.extractorVersion,
       updatedAt: new Date(),
     },
   });

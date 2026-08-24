@@ -1,5 +1,9 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+process.env.NEXUSS_AUTH_URL = "https://nexuss-auth.vercel.app";
+process.env.NEXUSS_AUTH_PROJECT_ID = "c-nine-study";
+process.env.JWT_SECRET = "test-session-secret";
+
 describe("Nexuss Auth server handoff", () => {
   afterEach(() => {
     vi.restoreAllMocks();

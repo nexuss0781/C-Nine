@@ -9,120 +9,120 @@ var UNAUTHED_ERR_MSG = "Please login (10001)";
 var NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
 
 // server/db.ts
-import { and, asc, desc, eq } from "drizzle-orm";
-import { drizzle } from "drizzle-orm/mysql2";
+import { and, asc, desc, eq, sql as sql2 } from "drizzle-orm";
+import { drizzle } from "parad/drizzle";
 
 // drizzle/schema.ts
+import { sql } from "drizzle-orm";
 import {
   index,
-  int,
-  longtext,
-  mysqlEnum,
-  mysqlTable,
-  timestamp,
-  uniqueIndex,
-  varchar
-} from "drizzle-orm/mysql-core";
-var users = mysqlTable("users", {
-  id: int("id").autoincrement().primaryKey(),
-  openId: varchar("openId", { length: 64 }).notNull().unique(),
-  name: longtext("name"),
-  email: varchar("email", { length: 320 }),
-  loginMethod: varchar("loginMethod", { length: 64 }),
-  role: mysqlEnum("role", ["user", "admin"]).default("user").notNull(),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
-  lastSignedIn: timestamp("lastSignedIn").defaultNow().notNull()
+  integer,
+  sqliteTable,
+  text,
+  uniqueIndex
+} from "drizzle-orm/sqlite-core";
+var timestamp = (name) => integer(name, { mode: "timestamp_ms" }).notNull().default(sql`(strftime('%s','now') * 1000)`);
+var nullableTimestamp = (name) => integer(name, { mode: "timestamp_ms" });
+var users = sqliteTable("users", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  openId: text("openId").notNull().unique(),
+  name: text("name"),
+  email: text("email"),
+  loginMethod: text("loginMethod"),
+  role: text("role", { enum: ["user", "admin"] }).notNull().default("user"),
+  createdAt: timestamp("createdAt"),
+  updatedAt: timestamp("updatedAt"),
+  lastSignedIn: timestamp("lastSignedIn")
 });
-var documents = mysqlTable("documents", {
-  id: int("id").autoincrement().primaryKey(),
-  userId: int("userId").notNull(),
-  filename: varchar("filename", { length: 512 }).notNull(),
-  storageKey: varchar("storageKey", { length: 1024 }).notNull(),
-  storageUrl: varchar("storageUrl", { length: 1200 }).notNull(),
-  mimeType: varchar("mimeType", { length: 120 }).notNull().default("application/pdf"),
-  sizeBytes: int("sizeBytes").notNull(),
-  pageCount: int("pageCount").notNull().default(0),
-  status: mysqlEnum("status", ["uploaded", "processing", "ready", "failed", "archived"]).notNull().default("uploaded"),
-  source: mysqlEnum("source", ["web", "telegram"]).notNull().default("web"),
-  archivedAt: timestamp("archivedAt"),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull()
+var documents = sqliteTable("documents", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  userId: integer("userId").notNull(),
+  filename: text("filename").notNull(),
+  storageKey: text("storageKey").notNull(),
+  storageUrl: text("storageUrl").notNull(),
+  mimeType: text("mimeType").notNull().default("application/pdf"),
+  sizeBytes: integer("sizeBytes").notNull(),
+  pageCount: integer("pageCount").notNull().default(0),
+  status: text("status", { enum: ["uploaded", "processing", "ready", "failed", "archived"] }).notNull().default("uploaded"),
+  source: text("source", { enum: ["web", "telegram"] }).notNull().default("web"),
+  archivedAt: nullableTimestamp("archivedAt"),
+  createdAt: timestamp("createdAt"),
+  updatedAt: timestamp("updatedAt")
 }, (table) => [
   index("documents_user_updated_idx").on(table.userId, table.updatedAt),
   index("documents_user_status_idx").on(table.userId, table.status)
 ]);
-var documentTexts = mysqlTable("documentTexts", {
-  id: int("id").autoincrement().primaryKey(),
-  documentId: int("documentId").notNull(),
-  userId: int("userId").notNull(),
-  extractedText: longtext("extractedText"),
-  pageMapJson: longtext("pageMapJson"),
-  extractorVersion: varchar("extractorVersion", { length: 64 }),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull()
+var documentTexts = sqliteTable("documentTexts", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  documentId: integer("documentId").notNull(),
+  userId: integer("userId").notNull(),
+  extractedText: text("extractedText"),
+  pageMapJson: text("pageMapJson"),
+  extractorVersion: text("extractorVersion"),
+  createdAt: timestamp("createdAt"),
+  updatedAt: timestamp("updatedAt")
 }, (table) => [
   uniqueIndex("document_text_document_unique").on(table.documentId),
   index("document_text_user_idx").on(table.userId)
 ]);
-var notes = mysqlTable("notes", {
-  id: int("id").autoincrement().primaryKey(),
-  userId: int("userId").notNull(),
-  documentId: int("documentId").notNull(),
-  title: varchar("title", { length: 255 }).notNull().default("Study notes"),
-  markdown: longtext("markdown").notNull(),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull()
+var notes = sqliteTable("notes", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  userId: integer("userId").notNull(),
+  documentId: integer("documentId").notNull(),
+  title: text("title").notNull().default("Study notes"),
+  markdown: text("markdown").notNull(),
+  createdAt: timestamp("createdAt"),
+  updatedAt: timestamp("updatedAt")
 }, (table) => [
   uniqueIndex("notes_user_document_unique").on(table.userId, table.documentId),
   index("notes_document_idx").on(table.documentId)
 ]);
-var chatThreads = mysqlTable("chatThreads", {
-  id: int("id").autoincrement().primaryKey(),
-  userId: int("userId").notNull(),
-  documentId: int("documentId").notNull(),
-  title: varchar("title", { length: 255 }).notNull().default("New study thread"),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull()
+var chatThreads = sqliteTable("chatThreads", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  userId: integer("userId").notNull(),
+  documentId: integer("documentId").notNull(),
+  title: text("title").notNull().default("New study thread"),
+  createdAt: timestamp("createdAt"),
+  updatedAt: timestamp("updatedAt")
 }, (table) => [
   index("threads_user_document_updated_idx").on(table.userId, table.documentId, table.updatedAt)
 ]);
-var chatMessages = mysqlTable("chatMessages", {
-  id: int("id").autoincrement().primaryKey(),
-  userId: int("userId").notNull(),
-  threadId: int("threadId").notNull(),
-  documentId: int("documentId").notNull(),
-  role: mysqlEnum("role", ["system", "user", "assistant"]).notNull(),
-  content: longtext("content").notNull(),
-  pageNumber: int("pageNumber"),
-  model: varchar("model", { length: 255 }),
-  createdAt: timestamp("createdAt").defaultNow().notNull()
+var chatMessages = sqliteTable("chatMessages", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  userId: integer("userId").notNull(),
+  threadId: integer("threadId").notNull(),
+  documentId: integer("documentId").notNull(),
+  role: text("role", { enum: ["system", "user", "assistant"] }).notNull(),
+  content: text("content").notNull(),
+  pageNumber: integer("pageNumber"),
+  model: text("model"),
+  createdAt: timestamp("createdAt")
 }, (table) => [
   index("messages_thread_created_idx").on(table.threadId, table.createdAt),
   index("messages_user_document_idx").on(table.userId, table.documentId)
 ]);
-var aiSettings = mysqlTable("aiSettings", {
-  id: int("id").autoincrement().primaryKey(),
-  userId: int("userId").notNull(),
-  baseUrl: varchar("baseUrl", { length: 1024 }),
-  encryptedApiKey: longtext("encryptedApiKey"),
-  keyMask: varchar("keyMask", { length: 48 }),
-  selectedModel: varchar("selectedModel", { length: 255 }),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull()
+var aiSettings = sqliteTable("aiSettings", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  userId: integer("userId").notNull(),
+  baseUrl: text("baseUrl"),
+  encryptedApiKey: text("encryptedApiKey"),
+  keyMask: text("keyMask"),
+  selectedModel: text("selectedModel"),
+  createdAt: timestamp("createdAt"),
+  updatedAt: timestamp("updatedAt")
 }, (table) => [
   uniqueIndex("ai_settings_user_unique").on(table.userId)
 ]);
-var processingEvents = mysqlTable("processingEvents", {
-  id: int("id").autoincrement().primaryKey(),
-  userId: int("userId").notNull(),
-  documentId: int("documentId").notNull(),
-  stage: mysqlEnum("stage", ["upload", "extract", "context"]).notNull(),
-  status: mysqlEnum("status", ["queued", "running", "succeeded", "failed"]).notNull(),
-  attempt: int("attempt").notNull().default(1),
-  detail: longtext("detail"),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-  completedAt: timestamp("completedAt")
+var processingEvents = sqliteTable("processingEvents", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  userId: integer("userId").notNull(),
+  documentId: integer("documentId").notNull(),
+  stage: text("stage", { enum: ["upload", "extract", "context"] }).notNull(),
+  status: text("status", { enum: ["queued", "running", "succeeded", "failed"] }).notNull(),
+  attempt: integer("attempt").notNull().default(1),
+  detail: text("detail"),
+  createdAt: timestamp("createdAt"),
+  completedAt: nullableTimestamp("completedAt")
 }, (table) => [
   index("processing_user_document_created_idx").on(table.userId, table.documentId, table.createdAt)
 ]);
@@ -142,44 +142,78 @@ var ENV = {
 
 // server/db.ts
 var _db = null;
+async function ensureParadoxSchema(db) {
+  const statements = [
+    `CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY AUTOINCREMENT, openId TEXT NOT NULL UNIQUE, name TEXT, email TEXT, loginMethod TEXT, role TEXT NOT NULL DEFAULT 'user', createdAt INTEGER NOT NULL DEFAULT (strftime('%s','now') * 1000), updatedAt INTEGER NOT NULL DEFAULT (strftime('%s','now') * 1000), lastSignedIn INTEGER NOT NULL DEFAULT (strftime('%s','now') * 1000))`,
+    `CREATE TABLE IF NOT EXISTS documents (id INTEGER PRIMARY KEY AUTOINCREMENT, userId INTEGER NOT NULL, filename TEXT NOT NULL, storageKey TEXT NOT NULL, storageUrl TEXT NOT NULL, mimeType TEXT NOT NULL DEFAULT 'application/pdf', sizeBytes INTEGER NOT NULL, pageCount INTEGER NOT NULL DEFAULT 0, status TEXT NOT NULL DEFAULT 'uploaded', source TEXT NOT NULL DEFAULT 'web', archivedAt INTEGER, createdAt INTEGER NOT NULL DEFAULT (strftime('%s','now') * 1000), updatedAt INTEGER NOT NULL DEFAULT (strftime('%s','now') * 1000))`,
+    `CREATE TABLE IF NOT EXISTS documentTexts (id INTEGER PRIMARY KEY AUTOINCREMENT, documentId INTEGER NOT NULL UNIQUE, userId INTEGER NOT NULL, extractedText TEXT, pageMapJson TEXT, extractorVersion TEXT, createdAt INTEGER NOT NULL DEFAULT (strftime('%s','now') * 1000), updatedAt INTEGER NOT NULL DEFAULT (strftime('%s','now') * 1000))`,
+    `CREATE TABLE IF NOT EXISTS notes (id INTEGER PRIMARY KEY AUTOINCREMENT, userId INTEGER NOT NULL, documentId INTEGER NOT NULL, title TEXT NOT NULL DEFAULT 'Study notes', markdown TEXT NOT NULL, createdAt INTEGER NOT NULL DEFAULT (strftime('%s','now') * 1000), updatedAt INTEGER NOT NULL DEFAULT (strftime('%s','now') * 1000), UNIQUE(userId, documentId))`,
+    `CREATE TABLE IF NOT EXISTS chatThreads (id INTEGER PRIMARY KEY AUTOINCREMENT, userId INTEGER NOT NULL, documentId INTEGER NOT NULL, title TEXT NOT NULL DEFAULT 'New study thread', createdAt INTEGER NOT NULL DEFAULT (strftime('%s','now') * 1000), updatedAt INTEGER NOT NULL DEFAULT (strftime('%s','now') * 1000))`,
+    `CREATE TABLE IF NOT EXISTS chatMessages (id INTEGER PRIMARY KEY AUTOINCREMENT, userId INTEGER NOT NULL, threadId INTEGER NOT NULL, documentId INTEGER NOT NULL, role TEXT NOT NULL, content TEXT NOT NULL, pageNumber INTEGER, model TEXT, createdAt INTEGER NOT NULL DEFAULT (strftime('%s','now') * 1000))`,
+    `CREATE TABLE IF NOT EXISTS aiSettings (id INTEGER PRIMARY KEY AUTOINCREMENT, userId INTEGER NOT NULL UNIQUE, baseUrl TEXT, encryptedApiKey TEXT, keyMask TEXT, selectedModel TEXT, createdAt INTEGER NOT NULL DEFAULT (strftime('%s','now') * 1000), updatedAt INTEGER NOT NULL DEFAULT (strftime('%s','now') * 1000))`,
+    `CREATE TABLE IF NOT EXISTS processingEvents (id INTEGER PRIMARY KEY AUTOINCREMENT, userId INTEGER NOT NULL, documentId INTEGER NOT NULL, stage TEXT NOT NULL, status TEXT NOT NULL, attempt INTEGER NOT NULL DEFAULT 1, detail TEXT, createdAt INTEGER NOT NULL DEFAULT (strftime('%s','now') * 1000), completedAt INTEGER)`,
+    `CREATE INDEX IF NOT EXISTS documents_user_updated_idx ON documents(userId, updatedAt)`,
+    `CREATE INDEX IF NOT EXISTS documents_user_status_idx ON documents(userId, status)`,
+    `CREATE INDEX IF NOT EXISTS document_text_user_idx ON documentTexts(userId)`,
+    `CREATE INDEX IF NOT EXISTS notes_document_idx ON notes(documentId)`,
+    `CREATE INDEX IF NOT EXISTS threads_user_document_updated_idx ON chatThreads(userId, documentId, updatedAt)`,
+    `CREATE INDEX IF NOT EXISTS messages_thread_created_idx ON chatMessages(threadId, createdAt)`,
+    `CREATE INDEX IF NOT EXISTS messages_user_document_idx ON chatMessages(userId, documentId)`,
+    `CREATE INDEX IF NOT EXISTS processing_user_document_created_idx ON processingEvents(userId, documentId, createdAt)`
+  ];
+  for (const statement of statements) await db.run(sql2.raw(statement));
+}
+var _dbPromise = null;
 async function getDb() {
-  if (!_db && process.env.DATABASE_URL) {
-    try {
-      _db = drizzle(process.env.DATABASE_URL);
-    } catch (error) {
-      console.warn("[Database] Failed to connect:", error);
-      _db = null;
-    }
+  if (_db) return _db;
+  if (!process.env.DATABASE_URL) return null;
+  if (!process.env.DATABASE_URL.startsWith("parad://")) {
+    throw new Error("DATABASE_URL must be a canonical parad:// URL");
   }
-  return _db;
+  if (!_dbPromise) {
+    _dbPromise = drizzle(process.env.DATABASE_URL, {
+      schema: { users, documents, documentTexts, notes, chatThreads, chatMessages, aiSettings, processingEvents }
+    }).then(async (db) => {
+      await ensureParadoxSchema(db);
+      _db = db;
+      return db;
+    }).catch((error) => {
+      console.warn("[Database] Failed to initialize Paradox:", error instanceof Error ? error.message : String(error));
+      _dbPromise = null;
+      return null;
+    });
+  }
+  return _dbPromise;
 }
 async function requireDb() {
   const db = await getDb();
-  if (!db) throw new Error("Database connection is unavailable");
+  if (!db) throw new Error("Paradox database connection is unavailable");
   return db;
 }
 async function upsertUser(user) {
   if (!user.openId) throw new Error("User openId is required for upsert");
-  const db = await getDb();
-  if (!db) return;
-  const values = { openId: user.openId };
-  const updateSet = {};
-  const textFields = ["name", "email", "loginMethod"];
-  for (const field of textFields) {
-    if (user[field] !== void 0) {
-      values[field] = user[field] ?? null;
-      updateSet[field] = user[field] ?? null;
+  const db = await requireDb();
+  const values = {
+    openId: user.openId,
+    name: user.name ?? null,
+    email: user.email ?? null,
+    loginMethod: user.loginMethod ?? null,
+    lastSignedIn: user.lastSignedIn ?? /* @__PURE__ */ new Date(),
+    role: user.role ?? (user.openId === ENV.ownerOpenId ? "admin" : "user")
+  };
+  await db.insert(users).values(values).onConflictDoUpdate({
+    target: users.openId,
+    set: {
+      name: values.name,
+      email: values.email,
+      loginMethod: values.loginMethod,
+      lastSignedIn: values.lastSignedIn,
+      role: values.role
     }
-  }
-  values.lastSignedIn = user.lastSignedIn ?? /* @__PURE__ */ new Date();
-  updateSet.lastSignedIn = values.lastSignedIn;
-  values.role = user.role ?? (user.openId === ENV.ownerOpenId ? "admin" : "user");
-  updateSet.role = values.role;
-  await db.insert(users).values(values).onDuplicateKeyUpdate({ set: updateSet });
+  });
 }
 async function getUserByOpenId(openId) {
-  const db = await getDb();
-  if (!db) return void 0;
+  const db = await requireDb();
   const result = await db.select().from(users).where(eq(users.openId, openId)).limit(1);
   return result[0];
 }
@@ -198,20 +232,21 @@ async function getDocumentForUser(userId, documentId) {
 }
 async function createDocumentForUser(input) {
   const db = await requireDb();
-  const result = await db.insert(documents).values({ ...input, status: "processing", source: input.source ?? "web" });
-  const id = Number(result[0].insertId);
+  const result = await db.insert(documents).values({ ...input, status: "processing", source: input.source ?? "web" }).returning({ id: documents.id });
+  const id = Number(result[0]?.id);
+  if (!id) throw new Error("Paradox did not return a document id");
   await addProcessingEvent({ userId: input.userId, documentId: id, stage: "upload", status: "succeeded", detail: "PDF stored securely." });
   await addProcessingEvent({ userId: input.userId, documentId: id, stage: "extract", status: "queued", detail: "Text extraction is queued." });
   return getDocumentForUser(input.userId, id);
 }
 async function updateDocumentProcessingForUser(input) {
   const db = await requireDb();
-  await db.update(documents).set({ status: input.status, pageCount: input.pageCount }).where(and(eq(documents.id, input.documentId), eq(documents.userId, input.userId)));
+  await db.update(documents).set({ status: input.status, updatedAt: /* @__PURE__ */ new Date(), ...input.pageCount === void 0 ? {} : { pageCount: input.pageCount } }).where(and(eq(documents.id, input.documentId), eq(documents.userId, input.userId)));
   return getDocumentForUser(input.userId, input.documentId);
 }
 async function archiveDocumentForUser(userId, documentId) {
   const db = await requireDb();
-  await db.update(documents).set({ status: "archived", archivedAt: /* @__PURE__ */ new Date() }).where(and(eq(documents.id, documentId), eq(documents.userId, userId)));
+  await db.update(documents).set({ status: "archived", archivedAt: /* @__PURE__ */ new Date(), updatedAt: /* @__PURE__ */ new Date() }).where(and(eq(documents.id, documentId), eq(documents.userId, userId)));
   return getDocumentForUser(userId, documentId);
 }
 async function deleteDocumentForUser(userId, documentId) {
@@ -230,15 +265,18 @@ async function getNoteForUser(userId, documentId) {
 }
 async function upsertNoteForUser(input) {
   const db = await requireDb();
-  await db.insert(notes).values({ ...input, title: input.title ?? "Study notes" }).onDuplicateKeyUpdate({
-    set: { markdown: input.markdown, title: input.title ?? "Study notes", updatedAt: /* @__PURE__ */ new Date() }
+  const title = input.title ?? "Study notes";
+  await db.insert(notes).values({ ...input, title }).onConflictDoUpdate({
+    target: [notes.userId, notes.documentId],
+    set: { markdown: input.markdown, title, updatedAt: /* @__PURE__ */ new Date() }
   });
   return getNoteForUser(input.userId, input.documentId);
 }
 async function createThreadForUser(input) {
   const db = await requireDb();
-  const result = await db.insert(chatThreads).values({ ...input, title: input.title ?? "New study thread" });
-  const id = Number(result[0].insertId);
+  const result = await db.insert(chatThreads).values({ ...input, title: input.title ?? "New study thread" }).returning({ id: chatThreads.id });
+  const id = Number(result[0]?.id);
+  if (!id) throw new Error("Paradox did not return a thread id");
   return getThreadForUser(input.userId, id);
 }
 async function getThreadForUser(userId, threadId) {
@@ -257,9 +295,11 @@ async function listMessagesForUser(userId, threadId) {
 }
 async function addMessageForUser(input) {
   const db = await requireDb();
-  const result = await db.insert(chatMessages).values(input);
+  const result = await db.insert(chatMessages).values(input).returning({ id: chatMessages.id });
   await db.update(chatThreads).set({ updatedAt: /* @__PURE__ */ new Date() }).where(and(eq(chatThreads.id, input.threadId), eq(chatThreads.userId, input.userId)));
-  return Number(result[0].insertId);
+  const id = Number(result[0]?.id);
+  if (!id) throw new Error("Paradox did not return a message id");
+  return id;
 }
 async function getAiSettingsForUser(userId) {
   const db = await requireDb();
@@ -268,12 +308,13 @@ async function getAiSettingsForUser(userId) {
 }
 async function upsertAiSettingsForUser(input) {
   const db = await requireDb();
-  await db.insert(aiSettings).values(input).onDuplicateKeyUpdate({
+  await db.insert(aiSettings).values(input).onConflictDoUpdate({
+    target: aiSettings.userId,
     set: {
-      baseUrl: input.baseUrl,
-      encryptedApiKey: input.encryptedApiKey,
-      keyMask: input.keyMask,
-      selectedModel: input.selectedModel,
+      baseUrl: input.baseUrl ?? null,
+      encryptedApiKey: input.encryptedApiKey ?? null,
+      keyMask: input.keyMask ?? null,
+      selectedModel: input.selectedModel ?? null,
       updatedAt: /* @__PURE__ */ new Date()
     }
   });
@@ -281,17 +322,19 @@ async function upsertAiSettingsForUser(input) {
 }
 async function upsertExtractedTextForUser(input) {
   const db = await requireDb();
-  await db.insert(documentTexts).values({
+  const values = {
     userId: input.userId,
     documentId: input.documentId,
     extractedText: input.extractedText,
     pageMapJson: JSON.stringify(input.pageMap),
     extractorVersion: input.extractorVersion
-  }).onDuplicateKeyUpdate({
+  };
+  await db.insert(documentTexts).values(values).onConflictDoUpdate({
+    target: documentTexts.documentId,
     set: {
-      extractedText: input.extractedText,
-      pageMapJson: JSON.stringify(input.pageMap),
-      extractorVersion: input.extractorVersion,
+      extractedText: values.extractedText,
+      pageMapJson: values.pageMapJson,
+      extractorVersion: values.extractorVersion,
       updatedAt: /* @__PURE__ */ new Date()
     }
   });
@@ -986,27 +1029,129 @@ ${documentExcerpt}`
 // server/scheduledPdfExtraction.ts
 import { timingSafeEqual } from "node:crypto";
 
-// server/pdfExtraction.ts
+// server/pdfEngine.ts
+var pdfjsPromise;
+var ocrWorkerPromise;
 async function loadPdfJs() {
-  return import("pdfjs-dist/legacy/build/pdf.mjs");
+  pdfjsPromise ??= import("pdfjs-dist/legacy/build/pdf.mjs");
+  return pdfjsPromise;
 }
-async function extractPdfText(bytes) {
+function normalizeText(value) {
+  return value.replace(/\s+/g, " ").trim();
+}
+function pageTextFromMap(pageMap) {
+  return pageMap.map((entry) => `Page ${entry.page}
+${entry.text}`).join("\n\n");
+}
+async function extractSelectableText(bytes) {
   const pdfjs = await loadPdfJs();
-  const loadingTask = pdfjs.getDocument({ data: bytes, disableFontFace: true, useWorkerFetch: false });
+  const loadingTask = pdfjs.getDocument({
+    data: new Uint8Array(bytes),
+    disableFontFace: true,
+    useWorkerFetch: false
+  });
   const pdf = await loadingTask.promise;
   const pageMap = [];
   try {
     for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber += 1) {
       const page = await pdf.getPage(pageNumber);
       const content = await page.getTextContent();
-      const text = content.items.map((item) => "str" in item ? item.str : "").join(" ").replace(/\s+/g, " ").trim();
-      pageMap.push({ page: pageNumber, text });
+      const text2 = normalizeText(content.items.map((item) => "str" in item ? item.str : "").join(" "));
+      pageMap.push({ page: pageNumber, text: text2 });
     }
-    return { pageCount: pdf.numPages, pageMap, text: pageMap.map((entry) => `Page ${entry.page}
-${entry.text}`).join("\n\n") };
+    return { pageCount: pdf.numPages, pageMap, text: pageTextFromMap(pageMap) };
   } finally {
     await loadingTask.destroy();
   }
+}
+function imageNames(operatorList) {
+  return Array.from(new Set(operatorList.argsArray.filter((args) => Array.isArray(args) && typeof args[0] === "string" && args[0].startsWith("img_")).map((args) => args[0])));
+}
+function getPageImage(page, name) {
+  return new Promise((resolve, reject) => {
+    try {
+      page.objs.get(name, (object) => resolve(object));
+    } catch (error) {
+      reject(error);
+    }
+  });
+}
+async function imageToPng(image) {
+  const { PNG } = await import("pngjs");
+  const { width, height } = image;
+  const source = Buffer.from(image.data.buffer, image.data.byteOffset, image.data.byteLength);
+  const rgba = Buffer.alloc(width * height * 4);
+  if (source.length === rgba.length) {
+    source.copy(rgba);
+  } else if (source.length === width * height * 3) {
+    for (let sourceIndex = 0, targetIndex = 0; sourceIndex < source.length; sourceIndex += 3, targetIndex += 4) {
+      rgba[targetIndex] = source[sourceIndex];
+      rgba[targetIndex + 1] = source[sourceIndex + 1];
+      rgba[targetIndex + 2] = source[sourceIndex + 2];
+      rgba[targetIndex + 3] = 255;
+    }
+  } else if (source.length === width * height) {
+    for (let sourceIndex = 0, targetIndex = 0; sourceIndex < source.length; sourceIndex += 1, targetIndex += 4) {
+      rgba[targetIndex] = source[sourceIndex];
+      rgba[targetIndex + 1] = source[sourceIndex];
+      rgba[targetIndex + 2] = source[sourceIndex];
+      rgba[targetIndex + 3] = 255;
+    }
+  } else {
+    throw new Error(`Unsupported embedded PDF image buffer: ${source.length} bytes for ${width}x${height}`);
+  }
+  return PNG.sync.write({ width, height, data: rgba });
+}
+async function loadOcrWorker(language) {
+  if (!ocrWorkerPromise) {
+    const { createWorker } = await import("tesseract.js");
+    ocrWorkerPromise = createWorker(language);
+  }
+  return ocrWorkerPromise;
+}
+async function extractScannedText(bytes, options, pageCount) {
+  const pdfjs = await loadPdfJs();
+  const pdf = await pdfjs.getDocument({ data: new Uint8Array(bytes), useWorkerFetch: false }).promise;
+  const worker = await loadOcrWorker(options.language ?? "eng");
+  const pageMap = [];
+  for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber += 1) {
+    const page = await pdf.getPage(pageNumber);
+    const operators = await page.getOperatorList();
+    const names = imageNames(operators);
+    let text2 = "";
+    if (names.length > 0) {
+      const images = await Promise.all(names.map((name) => getPageImage(page, name)));
+      const image = images.sort((left, right) => right.width * right.height - left.width * left.height)[0];
+      const png = await imageToPng(image);
+      const result = await worker.recognize(png);
+      text2 = normalizeText(result.data.text);
+    }
+    pageMap.push({ page: pageNumber, text: text2 });
+  }
+  if (options.keepWorkerWarm !== true) {
+    await worker.terminate();
+    ocrWorkerPromise = void 0;
+  }
+  return { pageCount, pageMap, text: pageTextFromMap(pageMap) };
+}
+async function extractPdfText(bytes, options = {}) {
+  const selectable = await extractSelectableText(bytes);
+  const hasText = selectable.pageMap.some((entry) => entry.text.length > 0);
+  if (hasText || options.ocr === false) {
+    return { ...selectable, method: "pdfjs", extractorVersion: "nexusspdf-pdfjs-6.2" };
+  }
+  const scanned = await extractScannedText(bytes, options, selectable.pageCount);
+  return { ...scanned, method: "tesseractjs", extractorVersion: "nexusspdf-pdfjs-6.2-tesseractjs-7" };
+}
+
+// server/pdfExtraction.ts
+var NEXUSSPDF_EXTRACTOR_VERSION = "nexusspdf-pdfjs-6.2-tesseractjs-7";
+async function extractPdfText2(bytes) {
+  return extractPdfText(bytes, {
+    ocr: true,
+    language: process.env.PDF_OCR_LANGUAGE ?? "eng",
+    keepWorkerWarm: process.env.VERCEL === "1"
+  });
 }
 async function downloadStoredPdf(storageKey) {
   const url = await storageGetSignedUrl(storageKey);
@@ -1017,19 +1162,19 @@ async function downloadStoredPdf(storageKey) {
 async function processOneDocument(document) {
   const ownedDocument = await getDocumentForUser(document.userId, document.id);
   if (!ownedDocument || ownedDocument.status !== "processing") return { skipped: true, documentId: document.id };
-  await addProcessingEvent({ userId: document.userId, documentId: document.id, stage: "extract", status: "running", detail: "Periodic processor started extraction." });
+  await addProcessingEvent({ userId: document.userId, documentId: document.id, stage: "extract", status: "running", detail: "NexussPDF processor started extraction." });
   try {
     const bytes = await downloadStoredPdf(document.storageKey);
-    const extracted = await extractPdfText(bytes);
+    const extracted = await extractPdfText2(bytes);
     await upsertExtractedTextForUser({
       userId: document.userId,
       documentId: document.id,
       extractedText: extracted.text,
       pageMap: extracted.pageMap,
       pageCount: extracted.pageCount,
-      extractorVersion: "pdfjs-6.2"
+      extractorVersion: extracted.extractorVersion ?? NEXUSSPDF_EXTRACTOR_VERSION
     });
-    return { skipped: false, documentId: document.id, pageCount: extracted.pageCount };
+    return { skipped: false, documentId: document.id, pageCount: extracted.pageCount, method: extracted.method };
   } catch (error) {
     const detail = error instanceof Error ? error.message.slice(0, 900) : "Unknown PDF extraction failure";
     await updateDocumentProcessingForUser({ userId: document.userId, documentId: document.id, status: "failed" });

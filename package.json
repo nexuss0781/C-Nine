@@ -10,7 +10,7 @@
     "check": "tsc --noEmit",
     "format": "prettier --write .",
     "test": "vitest run",
-    "db:push": "drizzle-kit generate && drizzle-kit migrate"
+    "db:push": "tsx scripts/parad-schema.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.693.0",
@@ -62,10 +62,10 @@
     "jose": "6.1.0",
     "lucide-react": "^0.453.0",
     "mermaid": "^11.16.1",
-    "mysql2": "^3.15.0",
     "nanoid": "^5.1.5",
     "next-themes": "^0.4.6",
     "nexuss-auth": "^1.0.0",
+    "parad": "2.2.4",
     "pdfjs-dist": "^6.2.108",
     "pngjs": "^7.0.0",
     "react": "^19.2.1",
@@ -103,7 +103,6 @@
     "@vitejs/plugin-react": "^5.0.4",
     "add": "^2.0.6",
     "autoprefixer": "^10.4.20",
-    "drizzle-kit": "^0.31.4",
     "esbuild": "^0.25.0",
     "jsdom": "^30.0.1",
     "pnpm": "^10.15.1",

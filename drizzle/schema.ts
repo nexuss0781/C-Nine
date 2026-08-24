@@ -1,121 +1,122 @@
+import { sql } from "drizzle-orm";
 import {
   index,
-  int,
-  longtext,
-  mysqlEnum,
-  mysqlTable,
-  timestamp,
+  integer,
+  sqliteTable,
+  text,
   uniqueIndex,
-  varchar,
-} from "drizzle-orm/mysql-core";
+} from "drizzle-orm/sqlite-core";
 
-export const users = mysqlTable("users", {
-  id: int("id").autoincrement().primaryKey(),
-  openId: varchar("openId", { length: 64 }).notNull().unique(),
-  name: longtext("name"),
-  email: varchar("email", { length: 320 }),
-  loginMethod: varchar("loginMethod", { length: 64 }),
-  role: mysqlEnum("role", ["user", "admin"]).default("user").notNull(),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
-  lastSignedIn: timestamp("lastSignedIn").defaultNow().notNull(),
+const timestamp = (name: string) => integer(name, { mode: "timestamp_ms" }).notNull().default(sql`(strftime('%s','now') * 1000)`);
+const nullableTimestamp = (name: string) => integer(name, { mode: "timestamp_ms" });
+
+export const users = sqliteTable("users", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  openId: text("openId").notNull().unique(),
+  name: text("name"),
+  email: text("email"),
+  loginMethod: text("loginMethod"),
+  role: text("role", { enum: ["user", "admin"] as const }).notNull().default("user"),
+  createdAt: timestamp("createdAt"),
+  updatedAt: timestamp("updatedAt"),
+  lastSignedIn: timestamp("lastSignedIn"),
 });
 
-export const documents = mysqlTable("documents", {
-  id: int("id").autoincrement().primaryKey(),
-  userId: int("userId").notNull(),
-  filename: varchar("filename", { length: 512 }).notNull(),
-  storageKey: varchar("storageKey", { length: 1024 }).notNull(),
-  storageUrl: varchar("storageUrl", { length: 1200 }).notNull(),
-  mimeType: varchar("mimeType", { length: 120 }).notNull().default("application/pdf"),
-  sizeBytes: int("sizeBytes").notNull(),
-  pageCount: int("pageCount").notNull().default(0),
-  status: mysqlEnum("status", ["uploaded", "processing", "ready", "failed", "archived"]).notNull().default("uploaded"),
-  source: mysqlEnum("source", ["web", "telegram"]).notNull().default("web"),
-  archivedAt: timestamp("archivedAt"),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+export const documents = sqliteTable("documents", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  userId: integer("userId").notNull(),
+  filename: text("filename").notNull(),
+  storageKey: text("storageKey").notNull(),
+  storageUrl: text("storageUrl").notNull(),
+  mimeType: text("mimeType").notNull().default("application/pdf"),
+  sizeBytes: integer("sizeBytes").notNull(),
+  pageCount: integer("pageCount").notNull().default(0),
+  status: text("status", { enum: ["uploaded", "processing", "ready", "failed", "archived"] as const }).notNull().default("uploaded"),
+  source: text("source", { enum: ["web", "telegram"] as const }).notNull().default("web"),
+  archivedAt: nullableTimestamp("archivedAt"),
+  createdAt: timestamp("createdAt"),
+  updatedAt: timestamp("updatedAt"),
 }, table => [
   index("documents_user_updated_idx").on(table.userId, table.updatedAt),
   index("documents_user_status_idx").on(table.userId, table.status),
 ]);
 
-export const documentTexts = mysqlTable("documentTexts", {
-  id: int("id").autoincrement().primaryKey(),
-  documentId: int("documentId").notNull(),
-  userId: int("userId").notNull(),
-  extractedText: longtext("extractedText"),
-  pageMapJson: longtext("pageMapJson"),
-  extractorVersion: varchar("extractorVersion", { length: 64 }),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+export const documentTexts = sqliteTable("documentTexts", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  documentId: integer("documentId").notNull(),
+  userId: integer("userId").notNull(),
+  extractedText: text("extractedText"),
+  pageMapJson: text("pageMapJson"),
+  extractorVersion: text("extractorVersion"),
+  createdAt: timestamp("createdAt"),
+  updatedAt: timestamp("updatedAt"),
 }, table => [
   uniqueIndex("document_text_document_unique").on(table.documentId),
   index("document_text_user_idx").on(table.userId),
 ]);
 
-export const notes = mysqlTable("notes", {
-  id: int("id").autoincrement().primaryKey(),
-  userId: int("userId").notNull(),
-  documentId: int("documentId").notNull(),
-  title: varchar("title", { length: 255 }).notNull().default("Study notes"),
-  markdown: longtext("markdown").notNull(),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+export const notes = sqliteTable("notes", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  userId: integer("userId").notNull(),
+  documentId: integer("documentId").notNull(),
+  title: text("title").notNull().default("Study notes"),
+  markdown: text("markdown").notNull(),
+  createdAt: timestamp("createdAt"),
+  updatedAt: timestamp("updatedAt"),
 }, table => [
   uniqueIndex("notes_user_document_unique").on(table.userId, table.documentId),
   index("notes_document_idx").on(table.documentId),
 ]);
 
-export const chatThreads = mysqlTable("chatThreads", {
-  id: int("id").autoincrement().primaryKey(),
-  userId: int("userId").notNull(),
-  documentId: int("documentId").notNull(),
-  title: varchar("title", { length: 255 }).notNull().default("New study thread"),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+export const chatThreads = sqliteTable("chatThreads", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  userId: integer("userId").notNull(),
+  documentId: integer("documentId").notNull(),
+  title: text("title").notNull().default("New study thread"),
+  createdAt: timestamp("createdAt"),
+  updatedAt: timestamp("updatedAt"),
 }, table => [
   index("threads_user_document_updated_idx").on(table.userId, table.documentId, table.updatedAt),
 ]);
 
-export const chatMessages = mysqlTable("chatMessages", {
-  id: int("id").autoincrement().primaryKey(),
-  userId: int("userId").notNull(),
-  threadId: int("threadId").notNull(),
-  documentId: int("documentId").notNull(),
-  role: mysqlEnum("role", ["system", "user", "assistant"]).notNull(),
-  content: longtext("content").notNull(),
-  pageNumber: int("pageNumber"),
-  model: varchar("model", { length: 255 }),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
+export const chatMessages = sqliteTable("chatMessages", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  userId: integer("userId").notNull(),
+  threadId: integer("threadId").notNull(),
+  documentId: integer("documentId").notNull(),
+  role: text("role", { enum: ["system", "user", "assistant"] as const }).notNull(),
+  content: text("content").notNull(),
+  pageNumber: integer("pageNumber"),
+  model: text("model"),
+  createdAt: timestamp("createdAt"),
 }, table => [
   index("messages_thread_created_idx").on(table.threadId, table.createdAt),
   index("messages_user_document_idx").on(table.userId, table.documentId),
 ]);
 
-export const aiSettings = mysqlTable("aiSettings", {
-  id: int("id").autoincrement().primaryKey(),
-  userId: int("userId").notNull(),
-  baseUrl: varchar("baseUrl", { length: 1024 }),
-  encryptedApiKey: longtext("encryptedApiKey"),
-  keyMask: varchar("keyMask", { length: 48 }),
-  selectedModel: varchar("selectedModel", { length: 255 }),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+export const aiSettings = sqliteTable("aiSettings", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  userId: integer("userId").notNull(),
+  baseUrl: text("baseUrl"),
+  encryptedApiKey: text("encryptedApiKey"),
+  keyMask: text("keyMask"),
+  selectedModel: text("selectedModel"),
+  createdAt: timestamp("createdAt"),
+  updatedAt: timestamp("updatedAt"),
 }, table => [
   uniqueIndex("ai_settings_user_unique").on(table.userId),
 ]);
 
-export const processingEvents = mysqlTable("processingEvents", {
-  id: int("id").autoincrement().primaryKey(),
-  userId: int("userId").notNull(),
-  documentId: int("documentId").notNull(),
-  stage: mysqlEnum("stage", ["upload", "extract", "context"]).notNull(),
-  status: mysqlEnum("status", ["queued", "running", "succeeded", "failed"]).notNull(),
-  attempt: int("attempt").notNull().default(1),
-  detail: longtext("detail"),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-  completedAt: timestamp("completedAt"),
+export const processingEvents = sqliteTable("processingEvents", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  userId: integer("userId").notNull(),
+  documentId: integer("documentId").notNull(),
+  stage: text("stage", { enum: ["upload", "extract", "context"] as const }).notNull(),
+  status: text("status", { enum: ["queued", "running", "succeeded", "failed"] as const }).notNull(),
+  attempt: integer("attempt").notNull().default(1),
+  detail: text("detail"),
+  createdAt: timestamp("createdAt"),
+  completedAt: nullableTimestamp("completedAt"),
 }, table => [
   index("processing_user_document_created_idx").on(table.userId, table.documentId, table.createdAt),
 ]);

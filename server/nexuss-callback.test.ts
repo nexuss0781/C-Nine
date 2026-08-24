@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => {
-  process.env.DATABASE_URL = "mysql://test-user:test-password@localhost/test";
+  process.env.DATABASE_URL = "parad://local/test?passphrase=test-passphrase";
   process.env.JWT_SECRET = "test-session-secret";
   return {
     exchangeNexussHandoff: vi.fn(),

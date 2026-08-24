@@ -23,7 +23,7 @@
 - [x] Add frontend and server tests for key interaction, authorization, validation, and error paths.
 - [x] Complete workspace-level keyboard-flow and focus-state validation across navigation, reading, library, and settings controls.
 - [x] Save a completed project checkpoint after the first delivered engineering phase.
-- [x] Implement the approved MySQL-compatible Drizzle schema and migration for user-scoped C-Nine workspace data.
+- [x] Implement the approved Paradox-compatible Drizzle schema and migration for user-scoped C-Nine workspace data.
 - [x] Replace the remaining mock activity history with authenticated document and chat-thread persistence.
 - [x] Implement protected PDF upload storage, file validation, and processing-state transitions using the managed storage service.
 - [x] Add the managed periodic extraction queue contract, idempotent scheduled handler, and processing retry controls.
